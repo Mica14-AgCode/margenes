@@ -1,4 +1,32 @@
-import streamlit as st
+# Función para cargar y procesar la tabla de fletes
+def cargar_tabla_fletes():
+    # Definición de la tabla de fletes según la imagen proporcionada
+    # NOTA: La tabla indica $/TN, los valores están en pesos argentinos por tonelada
+    # El punto en estos valores es separador de miles, no decimal
+    data = """KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN
+5,7429,105,21465,205,32492,305,44598,405,54765,520,62717
+10,7429,110,21976,210,33051,310,45100,410,55135,540,63617
+15,8334,115,22487,215,33617,315,45603,415,55505,560,64494
+20,9331,120,23001,220,34186,320,46108,420,55876,580,65354
+25,10242,125,23523,225,34762,325,46613,425,56245,600,66192
+30,11267,130,24048,230,35344,330,47120,430,56615,620,67011
+35,11926,135,24576,235,35930,335,47631,435,56986,640,67811
+40,12609,140,25109,240,36519,340,48143,440,57356,660,68593
+45,13314,145,25649,245,37117,345,48654,445,57728,680,69358
+50,14048,150,26190,250,37718,350,49167,450,58095,700,70106
+55,14644,155,26742,255,38325,355,49685,455,58466,725,71509
+60,15253,160,27293,260,38942,360,50201,460,58836,750,72886
+65,15881,165,27853,265,39560,365,50718,465,59206,775,74241
+70,16526,170,28418,270,40187,370,51240,470,59574,800,75573
+75,17197,175,28988,275,40821,375,51762,475,59946,850,77598
+80,17889,180,29565,280,41460,380,52283,480,60316,900,79556
+85,18609,185,30147,285,42110,385,52809,485,60684,950,81444
+90,19359,190,30738,290,42763,390,53337,490,61054,1000,83271
+95,20141,195,31332,295,43426,395,57865,495,61426,1050,85462
+100,20962,200,31935,300,44096,400,54393,500,61794,1100,87551"""
+    
+    # Procesamos la tabla para convertirla en un DataFrame
+    # Primero construimos las listas de KM y USDimport streamlit as st
 import pandas as pd
 import numpy as np
 
@@ -330,7 +358,7 @@ with tab2:
             costo_flete_usd_tn = costo_ars / tipo_cambio
             
             # Mostrar resultado
-            st.success(f"Costo de flete calculado: $ {costo_ars:.2f}/tn (USD {costo_flete_usd_tn:.2f}/tn)")
+            st.success(f"Costo de flete calculado: $ {int(costo_ars)}/tn (USD {costo_flete_usd_tn:.2f}/tn)")
             
             # Información adicional
             st.info(f"""

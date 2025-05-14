@@ -160,7 +160,7 @@ if 'rotaciones' not in st.session_state:
     }
 
 # Crear pestañas
-tab1, tab2, tab3, tab4 = st.tabs(["Tabla Comparativa", "Calculadora", "Rotaciones", "Ayuda"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Tabla Comparativa", "Calculadora", "Rotaciones", "Análisis de Sensibilidad", "Ayuda"])
 
 # Pestaña 1: Tabla Comparativa
 with tab1:
@@ -818,7 +818,296 @@ with tab3:
     df_rendimientos = pd.DataFrame(rendimientos)
     st.dataframe(df_rendimientos, hide_index=True, use_container_width=True)
 
-# Pestaña 4: Ayuda
+# Pestaña 4: Análisis de Sensibilidad
+with tab4:
+    st.header("Análisis de Sensibilidad")
+    st.markdown("""
+    En esta sección puedes evaluar cómo diferentes cambios en variables clave 
+    (rendimiento, precio, flete) afectan el resultado económico de los diferentes cultivos.
+    """)
+    
+    # Selección de cultivo para el análisis
+    cultivo_sensibilidad = st.selectbox("Seleccionar cultivo para análisis", cultivos, key="cultivo_sensibilidad")
+    
+    # Obtener índices de las variables
+    idx_superficie = df_comparativo[df_comparativo["Variable"] == "Superficie Ha"].index[0]
+    idx_rendimiento = df_comparativo[df_comparativo["Variable"] == "Rendimiento tn"].index[0]
+    idx_precio = df_comparativo[df_comparativo["Variable"] == "USD/tn"].index[0]
+    idx_costos_directos = df_comparativo[df_comparativo["Variable"] == "Total costos directos / ha"].index[0]
+    
+    # Valores base del cultivo seleccionado
+    rendimiento_base = df_comparativo.iloc[idx_rendimiento][cultivo_sensibilidad]
+    precio_base = df_comparativo.iloc[idx_precio][cultivo_sensibilidad]
+    costos_directos_base = df_comparativo.iloc[idx_costos_directos][cultivo_sensibilidad]
+    
+    # Crear dos columnas para los parámetros de sensibilidad
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Variaciones en Rendimiento")
+        
+        # Rango de variación para rendimientos
+        rango_rendimiento = st.slider(
+            "Rango de variación para rendimiento (%)", 
+            min_value=5, 
+            max_value=50, 
+            value=20, 
+            step=5,
+            help="Define el porcentaje de variación (hacia arriba y abajo) para el análisis de sensibilidad del rendimiento."
+        )
+        
+        # Calcular los escenarios de rendimiento
+        rendimiento_bajo = rendimiento_base * (1 - rango_rendimiento/100)
+        rendimiento_alto = rendimiento_base * (1 + rango_rendimiento/100)
+        
+        # Mostrar tabla de escenarios de rendimiento
+        st.write(f"**Escenarios de rendimiento para {cultivo_sensibilidad}:**")
+        escenarios_rendimiento = {
+            "Escenario": ["Rendimiento Bajo", "Rendimiento Base", "Rendimiento Alto"],
+            "Valor (tn/ha)": [rendimiento_bajo, rendimiento_base, rendimiento_alto],
+            "Variación (%)": [f"-{rango_rendimiento}%", "0%", f"+{rango_rendimiento}%"]
+        }
+        
+        df_escenarios_rendimiento = pd.DataFrame(escenarios_rendimiento)
+        st.dataframe(df_escenarios_rendimiento, hide_index=True, use_container_width=True)
+    
+    with col2:
+        st.subheader("Variaciones en Flete")
+        
+        # Rango de variación para flete
+        rango_flete = st.slider(
+            "Rango de variación para costo de flete (%)", 
+            min_value=5, 
+            max_value=50, 
+            value=20, 
+            step=5,
+            help="Define el porcentaje de variación (hacia arriba y abajo) para el análisis de sensibilidad del flete."
+        )
+        
+        # Valor base del flete (usando un valor predeterminado si no está definido)
+        flete_base_usd = 30  # Valor predeterminado en USD por tonelada
+        try:
+            # Intentamos cargar la tabla de fletes
+            df_fletes_analisis = cargar_tabla_fletes()
+            # Usamos un valor promedio de la tabla como base
+            flete_base_pesos = df_fletes_analisis['Tarifa_$/TN'].median()
+            # Convertir a USD (asumiendo tipo de cambio de 950)
+            flete_base_usd = flete_base_pesos / 950
+        except:
+            # Si hay algún error, mantenemos el valor predeterminado
+            pass
+        
+        # Calcular los escenarios de flete
+        flete_bajo = flete_base_usd * (1 - rango_flete/100)
+        flete_alto = flete_base_usd * (1 + rango_flete/100)
+        
+        # Mostrar tabla de escenarios de flete
+        st.write(f"**Escenarios de costo de flete:**")
+        escenarios_flete = {
+            "Escenario": ["Flete Bajo", "Flete Base", "Flete Alto"],
+            "Valor (USD/tn)": [flete_bajo, flete_base_usd, flete_alto],
+            "Variación (%)": [f"-{rango_flete}%", "0%", f"+{rango_flete}%"]
+        }
+        
+        df_escenarios_flete = pd.DataFrame(escenarios_flete)
+        st.dataframe(df_escenarios_flete, hide_index=True, use_container_width=True)
+    
+    # Función para calcular el margen directo en diferentes escenarios
+    def calcular_margen_directo(rendimiento, precio, costos_directos, flete, otros_costos=140, arrendamiento=160*0.3):
+        """
+        Calcula el margen directo por hectárea para los diferentes escenarios.
+        
+        Parámetros:
+        - rendimiento: Rendimiento en tn/ha
+        - precio: Precio en USD/tn
+        - costos_directos: Costos directos en USD/ha
+        - flete: Costo de flete en USD/tn
+        - otros_costos: Otros costos (comercialización, estructura, cosecha) en USD/ha
+        - arrendamiento: Costo de arrendamiento en USD/ha (ajustado por proporción)
+        
+        Retorna:
+        - Margen directo en USD/ha
+        """
+        costo_flete_ha = rendimiento * flete
+        ingreso_bruto = rendimiento * precio
+        margen_bruto = ingreso_bruto - costos_directos - otros_costos - costo_flete_ha
+        margen_directo = margen_bruto - arrendamiento
+        return margen_directo
+    
+    # Matriz de escenarios - combinaciones de rendimiento y flete
+    st.subheader("Matriz de Escenarios: Margen Directo (USD/ha)")
+    
+    # Crear matriz de escenarios
+    escenarios_matriz = {
+        "Escenario": ["Rendimiento Bajo", "Rendimiento Base", "Rendimiento Alto"],
+        "Flete Bajo": [
+            calcular_margen_directo(rendimiento_bajo, precio_base, costos_directos_base, flete_bajo),
+            calcular_margen_directo(rendimiento_base, precio_base, costos_directos_base, flete_bajo),
+            calcular_margen_directo(rendimiento_alto, precio_base, costos_directos_base, flete_bajo)
+        ],
+        "Flete Base": [
+            calcular_margen_directo(rendimiento_bajo, precio_base, costos_directos_base, flete_base_usd),
+            calcular_margen_directo(rendimiento_base, precio_base, costos_directos_base, flete_base_usd),
+            calcular_margen_directo(rendimiento_alto, precio_base, costos_directos_base, flete_base_usd)
+        ],
+        "Flete Alto": [
+            calcular_margen_directo(rendimiento_bajo, precio_base, costos_directos_base, flete_alto),
+            calcular_margen_directo(rendimiento_base, precio_base, costos_directos_base, flete_alto),
+            calcular_margen_directo(rendimiento_alto, precio_base, costos_directos_base, flete_alto)
+        ]
+    }
+    
+    df_matriz = pd.DataFrame(escenarios_matriz)
+    st.dataframe(df_matriz, hide_index=True, use_container_width=True)
+    
+    # Análisis gráfico
+    st.subheader("Análisis Gráfico de Sensibilidad")
+    
+    # Datos para el gráfico
+    base_margin = calcular_margen_directo(rendimiento_base, precio_base, costos_directos_base, flete_base_usd)
+    
+    # Impacto de variaciones en rendimiento (con flete base)
+    rend_variations = [-30, -20, -10, 0, 10, 20, 30]
+    margins_by_rend = [
+        calcular_margen_directo(rendimiento_base * (1 + var/100), precio_base, costos_directos_base, flete_base_usd)
+        for var in rend_variations
+    ]
+    
+    # Impacto de variaciones en flete (con rendimiento base)
+    flete_variations = [-30, -20, -10, 0, 10, 20, 30]
+    margins_by_flete = [
+        calcular_margen_directo(rendimiento_base, precio_base, costos_directos_base, flete_base_usd * (1 + var/100))
+        for var in flete_variations
+    ]
+    
+    # Crear DataFrame para gráfico
+    df_rend_chart = pd.DataFrame({
+        "Variación (%)": rend_variations,
+        "Margen Directo (USD/ha)": margins_by_rend
+    }).set_index("Variación (%)")
+    
+    df_flete_chart = pd.DataFrame({
+        "Variación (%)": flete_variations,
+        "Margen Directo (USD/ha)": margins_by_flete
+    }).set_index("Variación (%)")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Impacto del Rendimiento")
+        st.line_chart(df_rend_chart)
+        
+        # Calcular la elasticidad (cambio porcentual en margen / cambio porcentual en rendimiento)
+        rend_elasticity = ((margins_by_rend[5] - margins_by_rend[1]) / base_margin) / 0.4  # cambio de -20% a +20%
+        st.info(f"Elasticidad del margen respecto al rendimiento: {rend_elasticity:.2f}")
+        st.caption("Una elasticidad mayor que 1 indica alta sensibilidad del margen ante cambios en el rendimiento.")
+    
+    with col2:
+        st.subheader("Impacto del Flete")
+        st.line_chart(df_flete_chart)
+        
+        # Calcular la elasticidad (cambio porcentual en margen / cambio porcentual en flete)
+        # Tomamos el valor absoluto porque la relación es inversa
+        flete_elasticity = abs((margins_by_flete[5] - margins_by_flete[1]) / base_margin) / 0.4  # cambio de -20% a +20%
+        st.info(f"Elasticidad del margen respecto al flete: {flete_elasticity:.2f}")
+        st.caption("Una elasticidad cercana a 0 indica baja sensibilidad del margen ante cambios en el costo del flete.")
+    
+    # Tabla de análisis comparativo entre cultivos
+    st.subheader("Análisis Comparativo de Sensibilidad entre Cultivos")
+    
+    # Calcular elasticidad para cada cultivo
+    elasticidades = {
+        "Cultivo": [],
+        "Elasticidad Rendimiento": [],
+        "Elasticidad Flete": [],
+        "Relación Rendimiento/Flete": []  # Cuánto más importante es el rendimiento vs el flete
+    }
+    
+    for cult in cultivos:
+        # Obtener valores base para el cultivo
+        rend = df_comparativo.iloc[idx_rendimiento][cult]
+        prec = df_comparativo.iloc[idx_precio][cult]
+        cost = df_comparativo.iloc[idx_costos_directos][cult]
+        
+        # Calcular elasticidades
+        base_marg = calcular_margen_directo(rend, prec, cost, flete_base_usd)
+        
+        # Evitar división por cero
+        if base_marg == 0:
+            elast_rend = float('nan')
+            elast_flete = float('nan')
+            relation = float('nan')
+        else:
+            # Rendimiento +20%
+            marg_rend_up = calcular_margen_directo(rend * 1.2, prec, cost, flete_base_usd)
+            # Rendimiento -20%
+            marg_rend_down = calcular_margen_directo(rend * 0.8, prec, cost, flete_base_usd)
+            elast_rend = ((marg_rend_up - marg_rend_down) / base_marg) / 0.4
+            
+            # Flete +20%
+            marg_flete_up = calcular_margen_directo(rend, prec, cost, flete_base_usd * 1.2)
+            # Flete -20%
+            marg_flete_down = calcular_margen_directo(rend, prec, cost, flete_base_usd * 0.8)
+            elast_flete = abs((marg_flete_up - marg_flete_down) / base_marg) / 0.4
+            
+            # Relación entre elasticidades (cuán importante es el rendimiento vs el flete)
+            relation = elast_rend / elast_flete if elast_flete != 0 else float('inf')
+        
+        elasticidades["Cultivo"].append(cult)
+        elasticidades["Elasticidad Rendimiento"].append(elast_rend)
+        elasticidades["Elasticidad Flete"].append(elast_flete)
+        elasticidades["Relación Rendimiento/Flete"].append(relation)
+    
+    df_elasticidades = pd.DataFrame(elasticidades)
+    st.dataframe(df_elasticidades, hide_index=True, use_container_width=True)
+    
+    # Interpretación del análisis
+    st.subheader("Interpretación de Resultados")
+    
+    # Encontrar el cultivo más sensible al rendimiento
+    if not df_elasticidades["Elasticidad Rendimiento"].isna().all():
+        max_rend_idx = df_elasticidades["Elasticidad Rendimiento"].idxmax()
+        cultivo_max_rend = df_elasticidades.iloc[max_rend_idx]["Cultivo"]
+        elast_max_rend = df_elasticidades.iloc[max_rend_idx]["Elasticidad Rendimiento"]
+        
+        st.markdown(f"""
+        - **Cultivo más sensible a cambios en rendimiento**: {cultivo_max_rend} (elasticidad: {elast_max_rend:.2f})
+        - **Significado**: Un incremento del 10% en rendimiento de {cultivo_max_rend} aumentará su margen directo aproximadamente {elast_max_rend * 10:.1f}%
+        """)
+    
+    # Encontrar el cultivo más sensible al flete
+    if not df_elasticidades["Elasticidad Flete"].isna().all():
+        max_flete_idx = df_elasticidades["Elasticidad Flete"].idxmax()
+        cultivo_max_flete = df_elasticidades.iloc[max_flete_idx]["Cultivo"]
+        elast_max_flete = df_elasticidades.iloc[max_flete_idx]["Elasticidad Flete"]
+        
+        st.markdown(f"""
+        - **Cultivo más sensible a cambios en flete**: {cultivo_max_flete} (elasticidad: {elast_max_flete:.2f})
+        - **Significado**: Un incremento del 10% en costo de flete de {cultivo_max_flete} reducirá su margen directo aproximadamente {elast_max_flete * 10:.1f}%
+        """)
+    
+    # Recomendaciones basadas en el análisis
+    st.subheader("Recomendaciones")
+    
+    st.markdown("""
+    El análisis de sensibilidad permite tomar decisiones más informadas considerando el riesgo:
+    
+    1. **Para cultivos con alta elasticidad al rendimiento**:
+       - Priorizar prácticas agronómicas que aseguren estabilidad de rendimiento
+       - Considerar seguros agrícolas para proteger contra caídas de rendimiento
+       - Invertir más en tecnología y manejo que maximice el potencial productivo
+    
+    2. **Para cultivos con alta elasticidad al flete**:
+       - Negociar contratos de flete anticipados para fijar costos
+       - Evaluar alternativas de comercialización más cercanas
+       - Considerar almacenaje en campo para momentos de menor costo logístico
+    
+    3. **Para rotaciones**:
+       - Buscar un balance entre cultivos de alta rentabilidad pero sensibles a variaciones
+       - Incluir cultivos de mayor estabilidad para reducir el riesgo global
+    """)
+
+# Pestaña 5: Ayuda
 with tab4:
     st.header("Ayuda y Documentación")
     

@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
 
 # IMPORTANTE: set_page_config DEBE ser el primer comando de Streamlit
 st.set_page_config(
@@ -7,27 +9,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# Ahora podemos importar otras bibliotecas
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt  # Alternativa a Plotly si es necesario
-
-# Mensaje de carga mientras intentamos importar Plotly
-with st.spinner("Cargando componentes de visualización..."):
-    try:
-        import plotly.express as px
-        import plotly.graph_objects as go
-        plotly_available = True
-    except ImportError:
-        st.warning("No se pudo importar Plotly. Se usarán visualizaciones alternativas.")
-        # Creamos módulos vacíos para no romper el código
-        class DummyModule:
-            def __getattr__(self, name):
-                return lambda *args, **kwargs: None
-        px = DummyModule()
-        go = DummyModule()
-        plotly_available = False
 
 # Título y descripción
 st.title("📊 Calculadora de Márgenes Agrícolas")
@@ -166,59 +147,30 @@ with tab1:
         st.subheader(group_name)
         st.dataframe(df_results.iloc[indices], hide_index=True, use_container_width=True)
     
-    # Gráficos
+    # Visualizaciones simplificadas usando las utilidades nativas de Streamlit
     st.header("Visualización")
     
-    # Verificar si Plotly está disponible para las visualizaciones
-    if plotly_available:
-        # Comparación de ingresos vs costos vs margen con Plotly
-        labels = ['Ingreso Bruto', 'Costos Directos', 'Otros Costos', 'Margen Directo']
-        otros_costos = gastos_comercializacion + iibb_valor_ha + costos_estructura + costos_cosecha + arrendamiento
-        values = [ingreso_bruto_ha, total_costos_directos_ha, otros_costos, margen_directo_ha]
-        colors = ['#636EFA', '#EF553B', '#FFA15A', '#00CC96']
-
-        fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
-        fig.update_layout(title_text=f'Distribución de Ingresos y Costos para {cultivo}')
-        fig.update_traces(marker=dict(colors=colors))
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Desglose de costos directos
-        costos_labels = ['Labranza', 'Semilla', 'Herbicidas', 'Fungicidas', 'Insecticidas', 'Fertilizantes']
-        costos_values = [costo_labranza, costo_semilla, costo_herbicidas, costo_fungicidas, costo_insecticidas, costo_fertilizantes]
-        
-        fig2 = go.Figure([go.Bar(x=costos_labels, y=costos_values)])
-        fig2.update_layout(title_text=f'Desglose de Costos Directos para {cultivo}')
-        st.plotly_chart(fig2, use_container_width=True)
-    else:
-        # Alternativa con Matplotlib si Plotly no está disponible
-        st.subheader("Distribución de Ingresos y Costos")
-        
-        # Crear datos para el gráfico
-        labels = ['Ingreso Bruto', 'Costos Directos', 'Otros Costos', 'Margen Directo']
-        otros_costos = gastos_comercializacion + iibb_valor_ha + costos_estructura + costos_cosecha + arrendamiento
-        values = [ingreso_bruto_ha, total_costos_directos_ha, otros_costos, margen_directo_ha]
-        
-        # Crear figura de matplotlib
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-        plt.title(f'Distribución de Ingresos y Costos para {cultivo}')
-        
-        # Mostrar el gráfico
-        st.pyplot(fig)
-        
-        # Desglose de costos directos con matplotlib
-        st.subheader("Desglose de Costos Directos")
-        
-        costos_labels = ['Labranza', 'Semilla', 'Herbicidas', 'Fungicidas', 'Insecticidas', 'Fertilizantes']
-        costos_values = [costo_labranza, costo_semilla, costo_herbicidas, costo_fungicidas, costo_insecticidas, costo_fertilizantes]
-        
-        fig2, ax2 = plt.subplots(figsize=(10, 6))
-        ax2.bar(costos_labels, costos_values)
-        ax2.set_ylabel('USD/ha')
-        ax2.set_title(f'Costos Directos para {cultivo}')
-        
-        st.pyplot(fig2)
+    # Datos para gráficos
+    labels = ['Ingreso Bruto', 'Costos Directos', 'Otros Costos', 'Margen Directo']
+    otros_costos = gastos_comercializacion + iibb_valor_ha + costos_estructura + costos_cosecha + arrendamiento
+    values = [ingreso_bruto_ha, total_costos_directos_ha, otros_costos, margen_directo_ha]
+    
+    # Gráfico de barras simple usando Streamlit
+    st.subheader(f'Distribución de Ingresos y Costos para {cultivo}')
+    st.bar_chart(pd.DataFrame({
+        'Categoría': labels,
+        'USD/ha': values
+    }).set_index('Categoría'))
+    
+    # Desglose de costos directos
+    st.subheader(f'Desglose de Costos Directos para {cultivo}')
+    costos_labels = ['Labranza', 'Semilla', 'Herbicidas', 'Fungicidas', 'Insecticidas', 'Fertilizantes']
+    costos_values = [costo_labranza, costo_semilla, costo_herbicidas, costo_fungicidas, costo_insecticidas, costo_fertilizantes]
+    
+    st.bar_chart(pd.DataFrame({
+        'Tipo de Costo': costos_labels,
+        'USD/ha': costos_values
+    }).set_index('Tipo de Costo'))
 
 # Pestaña 2: Comparativa de Cultivos
 with tab2:
@@ -288,74 +240,9 @@ with tab2:
         compare_data = df_compare[compare_variable].reset_index()
         compare_data.columns = ["Cultivo", "Valor"]
     
-    # Gráfico de barras para comparar cultivos
-    if plotly_available:
-        fig_compare = px.bar(compare_data, x="Cultivo", y="Valor", 
-                            title=f"Comparación de {compare_variable} entre Cultivos",
-                            color="Cultivo")
-        st.plotly_chart(fig_compare, use_container_width=True)
-        
-        # Gráfico de radar para comparar todos los cultivos
-        if "Variable" in df_compare.columns:
-            # Preparar datos para gráfico de radar
-            radar_vars = ["Rendimiento tn", "Ingreso Bruto / ha", "Total costos directos / ha", "Margen Bruto / ha", "Margen Directo / ha"]
-            radar_data = {}
-            
-            for var in radar_vars:
-                if var in df_compare["Variable"].values:
-                    var_idx = df_compare[df_compare["Variable"] == var].index[0]
-                    radar_data[var] = df_compare.iloc[var_idx, 1:].values
-            
-            if radar_data:
-                radar_df = pd.DataFrame(radar_data, index=df_compare.columns[1:])
-                
-                # Normalizar los datos para el gráfico de radar
-                radar_df_norm = radar_df.copy()
-                for col in radar_df_norm.columns:
-                    min_val = radar_df_norm[col].min()
-                    max_val = radar_df_norm[col].max()
-                    if max_val > min_val:  # Evitar división por cero
-                        radar_df_norm[col] = (radar_df_norm[col] - min_val) / (max_val - min_val)
-                    else:
-                        radar_df_norm[col] = 0
-                
-                # Crear gráfico de radar
-                fig_radar = go.Figure()
-                
-                for i, cultivo in enumerate(radar_df_norm.index):
-                    fig_radar.add_trace(go.Scatterpolar(
-                        r=radar_df_norm.loc[cultivo].values,
-                        theta=radar_vars,
-                        fill='toself',
-                        name=cultivo
-                    ))
-                
-                fig_radar.update_layout(
-                    polar=dict(
-                        radialaxis=dict(
-                            visible=True,
-                            range=[0, 1]
-                        )),
-                    showlegend=True,
-                    title="Comparación Multidimensional de Cultivos (Normalizado)"
-                )
-                
-                st.plotly_chart(fig_radar, use_container_width=True)
-    else:
-        # Alternativa con Matplotlib
-        fig, ax = plt.subplots(figsize=(10, 6))
-        bars = ax.bar(compare_data["Cultivo"], compare_data["Valor"])
-        
-        # Colorear las barras
-        for i, bar in enumerate(bars):
-            bar.set_color(plt.cm.tab10(i))
-        
-        ax.set_ylabel('Valor (USD/ha)')
-        ax.set_title(f"Comparación de {compare_variable} entre Cultivos")
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        
-        st.pyplot(fig)
+    # Gráfico de barras usando Streamlit
+    st.subheader(f"Comparación de {compare_variable} entre Cultivos")
+    st.bar_chart(compare_data.set_index("Cultivo"))
 
 # Pestaña 3: Ayuda
 with tab3:

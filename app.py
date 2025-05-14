@@ -384,54 +384,37 @@ with tab2:
     st.markdown("---")
     st.header("Resultados")
     
-    # Crear lista de conceptos y valores
-    conceptos = [
-        "Superficie", "Rendimiento", "Precio", 
-        "Ingreso Bruto/ha", "Ingreso Bruto Total",
-        "Costos Directos/ha", "Costos Directos Total",
-        "Gastos Comercialización/ha", "Gastos Comercialización Total",
-        "Estructura/ha", "Estructura Total",
-        "Cosecha/ha", "Cosecha Total",
-        "Flete/ha", "Flete Total",
-        "Arrendamiento/ha (ajustado)", "Arrendamiento Total",
-        "Margen Bruto/ha", "Margen Bruto Total",
-        "Margen Directo/ha", "Margen Directo Total",
-        "Retorno sobre costos (%)"
+    # Tabla de resultados simplificada, sin usar f-strings
+    data = [
+        ["Superficie", str(superficie) + " ha"],
+        ["Rendimiento", str(rendimiento) + " tn/ha"],
+        ["Precio", "USD " + str(precio) + "/tn"],
+        ["Ingreso Bruto/ha", "USD " + str(round(ingreso_bruto_ha)) + "/ha"],
+        ["Ingreso Bruto Total", "USD " + str(round(ingreso_bruto_total))],
+        ["Costos Directos/ha", "USD " + str(round(total_costos_directos)) + "/ha"],
+        ["Costos Directos Total", "USD " + str(round(costos_directos_total))],
+        ["Gastos Comercialización/ha", "USD " + str(round(costos_comercializacion)) + "/ha"],
+        ["Gastos Comercialización Total", "USD " + str(round(gastos_comercializacion_total))],
+        ["Estructura/ha", "USD " + str(round(costos_estructura)) + "/ha"],
+        ["Estructura Total", "USD " + str(round(estructura_total))],
+        ["Cosecha/ha", "USD " + str(round(costos_cosecha)) + "/ha"],
+        ["Cosecha Total", "USD " + str(round(cosecha_total))],
+        ["Flete/ha", "USD " + str(round(costo_flete_ha)) + "/ha"],
+        ["Flete Total", "USD " + str(round(costo_flete_total))],
+        ["Arrendamiento/ha (ajustado)", "USD " + str(round(arrendamiento_ajustado * proporcion_arrendadas)) + "/ha"],
+        ["Arrendamiento Total", "USD " + str(round(arrendamiento_total))],
+        ["Margen Bruto/ha", "USD " + str(round(margen_bruto_ha)) + "/ha"],
+        ["Margen Bruto Total", "USD " + str(round(margen_bruto_total))],
+        ["Margen Directo/ha", "USD " + str(round(margen_directo_ha)) + "/ha"],
+        ["Margen Directo Total", "USD " + str(round(margen_directo_total))],
+        ["Retorno sobre costos (%)", str(round(retorno_costos, 1)) + "%"]
     ]
     
-    valores = [
-        f"{superficie} ha", 
-        f"{rendimiento} tn/ha", 
-        f"USD {precio}/tn",
-        f"USD {round(ingreso_bruto_ha)}/ha", 
-        f"USD {round(ingreso_bruto_total)}",
-        f"USD {round(total_costos_directos)}/ha", 
-        f"USD {round(costos_directos_total)}",
-        f"USD {round(costos_comercializacion)}/ha", 
-        f"USD {round(gastos_comercializacion_total)}",
-        f"USD {round(costos_estructura)}/ha", 
-        f"USD {round(estructura_total)}",
-        f"USD {round(costos_cosecha)}/ha", 
-        f"USD {round(cosecha_total)}",
-        f"USD {round(costo_flete_ha)}/ha", 
-        f"USD {round(costo_flete_total)}",
-        f"USD {round(arrendamiento_ajustado * proporcion_arrendadas)}/ha", 
-        f"USD {round(arrendamiento_total)}",
-        f"USD {round(margen_bruto_ha)}/ha", 
-        f"USD {round(margen_bruto_total)}",
-        f"USD {round(margen_directo_ha)}/ha", 
-        f"USD {round(margen_directo_total)}",
-        f"{round(retorno_costos, 1)}%"
-    ]
+    # Crear DataFrame para la tabla
+    df_resultados = pd.DataFrame(data, columns=["Concepto", "Valor"])
     
-    # Crear DataFrame para mostrar resultados
-    results_data = {
-        "Concepto": conceptos,
-        "Valor": valores
-    }
-    
-    results_df = pd.DataFrame(results_data)
-    st.dataframe(results_df, hide_index=True, use_container_width=True)
+    # Mostrar la tabla
+    st.dataframe(df_resultados, hide_index=True, use_container_width=True)
     
     # Visualizaciones
     st.subheader("Visualizaciones")
@@ -562,13 +545,13 @@ with tab3:
             "Cultivo": ["Trigo", "Soja 2da", "Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"],
             "Superficie (ha)": [total_trigo, total_soja2da, total_maiz2da, total_soja1ra, total_maiz, total_maiz_tardio, total_girasol],
             "% del Total": [
-                f"{(total_trigo/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
-                f"{(total_soja2da/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
-                f"{(total_maiz2da/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
-                f"{(total_soja1ra/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
-                f"{(total_maiz/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
-                f"{(total_maiz_tardio/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
-                f"{(total_girasol/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%"
+                "{:.1f}%".format((total_trigo/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0),
+                "{:.1f}%".format((total_soja2da/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0),
+                "{:.1f}%".format((total_maiz2da/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0),
+                "{:.1f}%".format((total_soja1ra/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0),
+                "{:.1f}%".format((total_maiz/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0),
+                "{:.1f}%".format((total_maiz_tardio/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0),
+                "{:.1f}%".format((total_girasol/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0)
             ]
         }
         
@@ -576,9 +559,10 @@ with tab3:
         st.dataframe(df_superficie, hide_index=True, use_container_width=True)
         
         # Mostrar totales
-        st.info(f"Superficie física total: {total_superficie} ha")
-        st.info(f"Superficie efectiva (incluyendo doble cultivo): {total_superficie_efectiva} ha")
-        st.info(f"Intensidad de uso: {(total_superficie_efectiva/total_superficie*100) if total_superficie > 0 else 0:.1f}%")
+        st.info("Superficie física total: " + str(total_superficie) + " ha")
+        st.info("Superficie efectiva (incluyendo doble cultivo): " + str(total_superficie_efectiva) + " ha")
+        intensidad_uso = (total_superficie_efectiva/total_superficie*100) if total_superficie > 0 else 0
+        st.info("Intensidad de uso: {:.1f}%".format(intensidad_uso))
     
     # Gráficos de rotación usando herramientas nativas de Streamlit
     st.subheader("Visualización de Rotaciones")
@@ -591,15 +575,22 @@ with tab3:
     cultivos_values = [total_trigo, total_soja2da, total_maiz2da, total_soja1ra, total_maiz, total_maiz_tardio, total_girasol]
     
     # Filtrar solo valores mayores que cero
-    filtered_labels = [label for label, value in zip(cultivos_labels, cultivos_values) if value > 0]
-    filtered_values = [value for value in cultivos_values if value > 0]
+    filtered_labels = []
+    filtered_values = []
+    for label, value in zip(cultivos_labels, cultivos_values):
+        if value > 0:
+            filtered_labels.append(label)
+            filtered_values.append(value)
     
     # Crear dataframe para el gráfico de barras de Streamlit
-    chart_data_cultivos = pd.DataFrame({
-        'Superficie': filtered_values
-    }, index=filtered_labels)
-    
-    st.bar_chart(chart_data_cultivos)
+    if filtered_values:  # Solo si hay valores mayores que cero
+        chart_data_cultivos = pd.DataFrame({
+            'Superficie': filtered_values
+        }, index=filtered_labels)
+        
+        st.bar_chart(chart_data_cultivos)
+    else:
+        st.warning("No hay cultivos con superficie para visualizar.")
     
     # Visualización por rotación
     st.subheader("Distribución por Tipo de Rotación")
@@ -609,15 +600,22 @@ with tab3:
     rotaciones_values = [trigo_soja2da, trigo_maiz2da, soja1ra_sola, maiz_solo, maiz_tardio, girasol_solo]
     
     # Filtrar solo valores mayores que cero
-    filtered_labels = [label for label, value in zip(rotaciones_labels, rotaciones_values) if value > 0]
-    filtered_values = [value for value in rotaciones_values if value > 0]
+    filtered_labels = []
+    filtered_values = []
+    for label, value in zip(rotaciones_labels, rotaciones_values):
+        if value > 0:
+            filtered_labels.append(label)
+            filtered_values.append(value)
     
     # Crear dataframe para el gráfico de barras de Streamlit
-    chart_data_rotaciones = pd.DataFrame({
-        'Superficie': filtered_values
-    }, index=filtered_labels)
-    
-    st.bar_chart(chart_data_rotaciones)
+    if filtered_values:  # Solo si hay valores mayores que cero
+        chart_data_rotaciones = pd.DataFrame({
+            'Superficie': filtered_values
+        }, index=filtered_labels)
+        
+        st.bar_chart(chart_data_rotaciones)
+    else:
+        st.warning("No hay rotaciones con superficie para visualizar.")
     
     # Análisis económico de las rotaciones
     st.subheader("Análisis Económico de Rotaciones")
@@ -705,17 +703,25 @@ with tab3:
     df_economia_rotaciones = pd.DataFrame(rotaciones_economico)
     
     # Agregar fila de totales
-    total_row = {
+    sum_superficie = sum(df_economia_rotaciones["Superficie (ha)"])
+    sum_margen_bruto_total = sum(df_economia_rotaciones["Margen Bruto Total (USD)"])
+    sum_margen_directo_total = sum(df_economia_rotaciones["Margen Directo Total (USD)"])
+    
+    # Calcular promedios ponderados por hectárea
+    prom_margen_bruto_ha = sum_margen_bruto_total / sum_superficie if sum_superficie > 0 else 0
+    prom_margen_directo_ha = sum_margen_directo_total / sum_superficie if sum_superficie > 0 else 0
+    
+    total_row = pd.DataFrame([{
         "Rotación": "TOTAL",
-        "Superficie (ha)": sum(df_economia_rotaciones["Superficie (ha)"]),
-        "Margen Bruto (USD/ha)": sum(df_economia_rotaciones["Margen Bruto Total (USD)"]) / sum(df_economia_rotaciones["Superficie (ha)"]) if sum(df_economia_rotaciones["Superficie (ha)"]) > 0 else 0,
-        "Margen Directo (USD/ha)": sum(df_economia_rotaciones["Margen Directo Total (USD)"]) / sum(df_economia_rotaciones["Superficie (ha)"]) if sum(df_economia_rotaciones["Superficie (ha)"]) > 0 else 0,
-        "Margen Bruto Total (USD)": sum(df_economia_rotaciones["Margen Bruto Total (USD)"]),
-        "Margen Directo Total (USD)": sum(df_economia_rotaciones["Margen Directo Total (USD)"])
-    }
+        "Superficie (ha)": sum_superficie,
+        "Margen Bruto (USD/ha)": prom_margen_bruto_ha,
+        "Margen Directo (USD/ha)": prom_margen_directo_ha,
+        "Margen Bruto Total (USD)": sum_margen_bruto_total,
+        "Margen Directo Total (USD)": sum_margen_directo_total
+    }])
     
     # Añadir fila de totales al dataframe
-    df_economia_rotaciones = pd.concat([df_economia_rotaciones, pd.DataFrame([total_row])], ignore_index=True)
+    df_economia_rotaciones = pd.concat([df_economia_rotaciones, total_row], ignore_index=True)
     
     # Mostrar tabla económica
     st.dataframe(df_economia_rotaciones, hide_index=True, use_container_width=True)
@@ -724,18 +730,30 @@ with tab3:
     st.subheader("Comparativa de Márgenes por Rotación")
     
     # Excluir la fila de totales
-    df_grafico = df_economia_rotaciones[:-1].copy()
+    df_grafico = df_economia_rotaciones.iloc[:-1].copy()
     
     # Filtrar rotaciones con superficie > 0
     df_grafico = df_grafico[df_grafico["Superficie (ha)"] > 0]
     
     # Crear dataframe para gráfico
-    chart_data = pd.DataFrame({
-        "Margen Bruto (USD/ha)": df_grafico["Margen Bruto (USD/ha)"],
-        "Margen Directo (USD/ha)": df_grafico["Margen Directo (USD/ha)"]
-    }, index=df_grafico["Rotación"])
-    
-    st.bar_chart(chart_data)
+    if not df_grafico.empty:
+        chart_data = pd.DataFrame({
+            "Margen Bruto (USD/ha)": df_grafico["Margen Bruto (USD/ha)"],
+            "Margen Directo (USD/ha)": df_grafico["Margen Directo (USD/ha)"]
+        }, index=df_grafico["Rotación"])
+        
+        st.bar_chart(chart_data)
+        
+        # Obtener la rotación más rentable
+        idx_max = df_grafico["Margen Directo (USD/ha)"].idxmax()
+        mejor_rotacion = df_grafico.loc[idx_max, "Rotación"]
+        margen_maximo = df_grafico.loc[idx_max, "Margen Directo (USD/ha)"]
+        
+        # Mostrar el mensaje de la rotación más rentable
+        st.info("Conclusión: La rotación más rentable por hectárea es **" + mejor_rotacion + 
+                "** con un margen directo de **USD " + str(round(margen_maximo, 2)) + "/ha**.")
+    else:
+        st.warning("No hay rotaciones con superficie para analizar.")
     
     # Análisis de riesgo (versión simple)
     st.subheader("Variabilidad de rendimientos por cultivo")
@@ -744,10 +762,13 @@ with tab3:
     (clima, manejo, etc.) afectan el resultado económico.
     """)
     
+    # Índice para rendimiento
+    idx_rendimiento = df_comparativo[df_comparativo["Variable"] == "Rendimiento tn"].index[0]
+    
     # Escenarios de rendimiento
     # Para simplificar, asumimos que el rendimiento puede variar ±20%
     rendimientos = {
-        "Cultivo": ["Trigo", "Soja 2da", "Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"],
+        "Cultivo": cultivos_labels,
         "Rendimiento Base (tn/ha)": [
             df_comparativo.iloc[idx_rendimiento]["Trigo"],
             df_comparativo.iloc[idx_rendimiento]["Soja 2da"],
@@ -779,19 +800,6 @@ with tab3:
     
     df_rendimientos = pd.DataFrame(rendimientos)
     st.dataframe(df_rendimientos, hide_index=True, use_container_width=True)
-    
-    # Mostrar un mensaje final
-    if len(df_grafico) > 0:
-        mejor_rotacion = df_grafico.loc[df_grafico['Margen Directo (USD/ha)'].idxmax(), 'Rotación']
-        margen_maximo = df_grafico['Margen Directo (USD/ha)'].max()
-        st.info(f"""
-        Conclusión: La rotación más rentable por hectárea es 
-        **{mejor_rotacion}** 
-        con un margen directo de 
-        **USD {margen_maximo:.2f}/ha**.
-        """)
-    else:
-        st.warning("No hay rotaciones con superficie para analizar.")
 
 # Pestaña 4: Ayuda
 with tab4:
@@ -833,7 +841,7 @@ with tab4:
     }
     
     for term, definition in terms.items():
-        st.markdown(f"**{term}**: {definition}")
+        st.markdown("**" + term + "**: " + definition)
     
     st.subheader("Sobre las Rotaciones")
     st.markdown("""

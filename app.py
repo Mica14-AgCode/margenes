@@ -406,7 +406,7 @@ with tab2:
             f"USD {round(costos_comercializacion)}/ha", f"USD {round(gastos_comercializacion_total)}",
             f"USD {round(costos_estructura)}/ha", f"USD {round(estructura_total)}",
             f"USD {round(costos_cosecha)}/ha", f"USD {round(cosecha_total)}",
-            f"USD {round(costo_flete_ha)}/ha", f"USD {round(costo_flete_total)}",  # Nueva línea para flete
+            f"USD {round(costo_flete_ha)}/ha", f"USD {round(costo_flete_total)}",
             f"USD {round(arrendamiento_ajustado * proporcion_arrendadas)}/ha", f"USD {round(arrendamiento_total)}",
             f"USD {round(margen_bruto_ha)}/ha", f"USD {round(margen_bruto_total)}",
             f"USD {round(margen_directo_ha)}/ha", f"USD {round(margen_directo_total)}",

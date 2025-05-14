@@ -1,39 +1,32 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-import streamlit as st
-import pandas as pd
-import numpy as np
 
-# Intentar instalar plotly
-import subprocess
-import sys
-
-# Mostrar mensaje al usuario
-st.write("Intentando instalar plotly...")
-
-# Intentar instalación
-try:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "plotly"])
-    st.success("¡Plotly instalado correctamente!")
-except Exception as e:
-    st.error(f"Error al instalar plotly: {e}")
-
-# Ahora intentar importar
+# Primero intentamos importar plotly directamente
 try:
     import plotly.express as px
     import plotly.graph_objects as go
-    st.success("¡Plotly importado correctamente!")
+    st.success("Plotly importado correctamente!")
 except ImportError:
-    st.error("No se pudo importar plotly a pesar de la instalación")
-    # Definir variables vacías para evitar errores
-    class DummyModule:
-        def __getattr__(self, name):
-            return lambda *args, **kwargs: None
-    px = DummyModule()
-    go = DummyModule()
+    st.error("No se pudo importar plotly. Intentando instalar...")
+    
+    # Intentar instalación solo si la importación falla
+    import subprocess
+    import sys
+    
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "plotly==5.14.1"])
+        import plotly.express as px
+        import plotly.graph_objects as go
+        st.success("Plotly instalado e importado correctamente!")
+    except Exception as e:
+        st.error(f"Error al instalar plotly: {e}")
+        # Definimos módulos dummy para evitar errores
+        class DummyModule:
+            def __getattr__(self, name):
+                return lambda *args, **kwargs: None
+        px = DummyModule()
+        go = DummyModule()
 
 # Continuar con el resto del código
 # Configuración de la página

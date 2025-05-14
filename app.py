@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 # IMPORTANTE: set_page_config DEBE ser el primer comando de Streamlit
 st.set_page_config(
@@ -421,25 +420,20 @@ with tab2:
     # Visualizaciones
     st.subheader("Visualizaciones")
     
-    # Gráfico de distribución de ingresos y costos
-    labels = ['Costos Directos', 'Comercialización', 'Estructura', 'Cosecha', 'Flete', 'Arrendamiento', 'Margen Directo']  # Agregado 'Flete'
-    values = [
-        total_costos_directos, 
-        costos_comercializacion, 
-        costos_estructura, 
-        costos_cosecha,
-        costo_flete_ha,  # Nuevo valor para flete
-        arrendamiento_ajustado * proporcion_arrendadas,
-        margen_directo_ha
-    ]
-    
-    # Crear dataframe para el gráfico
+    # Gráfico de distribución de ingresos y costos usando st.bar_chart
     chart_data = pd.DataFrame({
-        'Categoría': labels,
-        'USD/ha': values
-    })
+        'USD/ha': [
+            total_costos_directos, 
+            costos_comercializacion, 
+            costos_estructura, 
+            costos_cosecha,
+            costo_flete_ha,
+            arrendamiento_ajustado * proporcion_arrendadas,
+            margen_directo_ha
+        ]
+    }, index=['Costos Directos', 'Comercialización', 'Estructura', 'Cosecha', 'Flete', 'Arrendamiento', 'Margen Directo'])
     
-    st.bar_chart(chart_data.set_index('Categoría'))
+    st.bar_chart(chart_data)
 
 # Pestaña 3: Rotaciones
 with tab3:
@@ -570,60 +564,44 @@ with tab3:
         st.info(f"Superficie efectiva (incluyendo doble cultivo): {total_superficie_efectiva} ha")
         st.info(f"Intensidad de uso: {(total_superficie_efectiva/total_superficie*100) if total_superficie > 0 else 0:.1f}%")
     
-    # Gráficos de rotación
+    # Gráficos de rotación usando herramientas nativas de Streamlit
     st.subheader("Visualización de Rotaciones")
     
-    # Gráfico de torta de distribución de cultivos
-    col1, col2 = st.columns(2)
+    # Visualización por cultivo
+    st.subheader("Distribución por Cultivo")
     
-    with col1:
-        st.subheader("Distribución por Cultivo")
-        
-        # Datos para gráfico
-        cultivos_labels = ["Trigo", "Soja 2da", "Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"]
-        cultivos_values = [total_trigo, total_soja2da, total_maiz2da, total_soja1ra, total_maiz, total_maiz_tardio, total_girasol]
-        
-        # Filtrar solo valores mayores que cero
-        filtered_labels = [label for label, value in zip(cultivos_labels, cultivos_values) if value > 0]
-        filtered_values = [value for value in cultivos_values if value > 0]
-        
-        # Crear dataframe para pie chart
-        chart_data = pd.DataFrame({
-            'Cultivo': filtered_labels,
-            'Superficie': filtered_values
-        })
-        
-        # Streamlit no tiene gráfico de torta nativo, usamos matplotlib a través de st.pyplot
-        fig, ax = plt.subplots(figsize=(8, 8))
-        ax.pie(chart_data['Superficie'], labels=chart_data['Cultivo'], autopct='%1.1f%%')
-        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-        plt.title('Distribución de Superficie por Cultivo')
-        
-        st.pyplot(fig)
+    # Datos para gráfico
+    cultivos_labels = ["Trigo", "Soja 2da", "Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"]
+    cultivos_values = [total_trigo, total_soja2da, total_maiz2da, total_soja1ra, total_maiz, total_maiz_tardio, total_girasol]
     
-    with col2:
-        st.subheader("Distribución por Tipo de Rotación")
-        
-        # Datos para gráfico
-        rotaciones_labels = ["Trigo + Soja 2da", "Trigo + Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"]
-        rotaciones_values = [trigo_soja2da, trigo_maiz2da, soja1ra_sola, maiz_solo, maiz_tardio, girasol_solo]
-        
-        # Filtrar solo valores mayores que cero
-        filtered_labels = [label for label, value in zip(rotaciones_labels, rotaciones_values) if value > 0]
-        filtered_values = [value for value in rotaciones_values if value > 0]
-        
-        # Crear dataframe para pie chart
-        chart_data = pd.DataFrame({
-            'Rotación': filtered_labels,
-            'Superficie': filtered_values
-        })
-        
-        fig, ax = plt.subplots(figsize=(8, 8))
-        ax.pie(chart_data['Superficie'], labels=chart_data['Rotación'], autopct='%1.1f%%')
-        ax.axis('equal')
-        plt.title('Distribución por Tipo de Rotación')
-        
-        st.pyplot(fig)
+    # Filtrar solo valores mayores que cero
+    filtered_labels = [label for label, value in zip(cultivos_labels, cultivos_values) if value > 0]
+    filtered_values = [value for value in cultivos_values if value > 0]
+    
+    # Crear dataframe para el gráfico de barras de Streamlit
+    chart_data_cultivos = pd.DataFrame({
+        'Superficie': filtered_values
+    }, index=filtered_labels)
+    
+    st.bar_chart(chart_data_cultivos)
+    
+    # Visualización por rotación
+    st.subheader("Distribución por Tipo de Rotación")
+    
+    # Datos para gráfico
+    rotaciones_labels = ["Trigo + Soja 2da", "Trigo + Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"]
+    rotaciones_values = [trigo_soja2da, trigo_maiz2da, soja1ra_sola, maiz_solo, maiz_tardio, girasol_solo]
+    
+    # Filtrar solo valores mayores que cero
+    filtered_labels = [label for label, value in zip(rotaciones_labels, rotaciones_values) if value > 0]
+    filtered_values = [value for value in rotaciones_values if value > 0]
+    
+    # Crear dataframe para el gráfico de barras de Streamlit
+    chart_data_rotaciones = pd.DataFrame({
+        'Superficie': filtered_values
+    }, index=filtered_labels)
+    
+    st.bar_chart(chart_data_rotaciones)
     
     # Análisis económico de las rotaciones
     st.subheader("Análisis Económico de Rotaciones")
@@ -787,12 +765,17 @@ with tab3:
     st.dataframe(df_rendimientos, hide_index=True, use_container_width=True)
     
     # Mostrar un mensaje final
-    st.info(f"""
-    Conclusión: La rotación más rentable por hectárea es 
-    **{df_grafico.loc[df_grafico['Margen Directo (USD/ha)'].idxmax(), 'Rotación']}** 
-    con un margen directo de 
-    **USD {df_grafico['Margen Directo (USD/ha)'].max():.2f}/ha**.
-    """)
+    if len(df_grafico) > 0:
+        mejor_rotacion = df_grafico.loc[df_grafico['Margen Directo (USD/ha)'].idxmax(), 'Rotación']
+        margen_maximo = df_grafico['Margen Directo (USD/ha)'].max()
+        st.info(f"""
+        Conclusión: La rotación más rentable por hectárea es 
+        **{mejor_rotacion}** 
+        con un margen directo de 
+        **USD {margen_maximo:.2f}/ha**.
+        """)
+    else:
+        st.warning("No hay rotaciones con superficie para analizar.")
 
 # Pestaña 4: Ayuda
 with tab4:

@@ -26,14 +26,26 @@ datos_cultivos = {
     "Trigo": [346, 3.6, 198, 722, 312, 98, 19],
     "Soja 2da": [309, 2.1, 290, 621, 205, 158, 78],
     "Maíz 2da": [37, 6.5, 168, 1097, 369, 203, 123],
+    "Maíz Tardío": [120, 6.0, 168, 1008, 369, 180, 100],  # Agregamos Maíz Tardío
     "Girasol": [101, 2.4, 293, 714, 286, 182, 23]
 }
 
 # Crear DataFrame
 df_comparativo = pd.DataFrame(datos_cultivos)
 
+# Inicializar estado para rotaciones si no existe
+if 'rotaciones' not in st.session_state:
+    st.session_state.rotaciones = {
+        'trigo_soja2da': 280,       # Trigo seguido de Soja 2da
+        'trigo_maiz2da': 66,        # Trigo seguido de Maíz 2da
+        'soja1ra_sola': 1199,       # Soja 1ra como único cultivo en el año
+        'maiz_solo': 1015,          # Maíz como único cultivo en el año
+        'maiz_tardio': 120,         # Maíz tardío
+        'girasol_solo': 101         # Girasol como único cultivo en el año
+    }
+
 # Crear pestañas
-tab1, tab2, tab3 = st.tabs(["Tabla Comparativa", "Calculadora", "Ayuda"])
+tab1, tab2, tab3, tab4 = st.tabs(["Tabla Comparativa", "Calculadora", "Rotaciones", "Ayuda"])
 
 # Pestaña 1: Tabla Comparativa
 with tab1:
@@ -209,13 +221,368 @@ with tab2:
     
     st.bar_chart(chart_data.set_index('Categoría'))
 
-# Pestaña 3: Ayuda
+# Pestaña 3: Rotaciones
 with tab3:
+    st.header("Análisis de Rotaciones")
+    st.markdown("""
+    En esta sección puedes analizar tus rotaciones de cultivos y su impacto económico.
+    Recuerda que algunos cultivos como el trigo se complementan con cultivos de segunda
+    ocupación como la soja 2da o el maíz 2da.
+    """)
+    
+    # Crear columnas para editar rotaciones
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Configuración de Rotaciones")
+        st.markdown("Define la cantidad de hectáreas para cada rotación:")
+        
+        # Trigo seguido de Soja 2da
+        trigo_soja2da = st.number_input(
+            "Trigo + Soja 2da (ha)",
+            min_value=0,
+            value=st.session_state.rotaciones['trigo_soja2da'],
+            step=10
+        )
+        
+        # Trigo seguido de Maíz 2da
+        trigo_maiz2da = st.number_input(
+            "Trigo + Maíz 2da (ha)",
+            min_value=0,
+            value=st.session_state.rotaciones['trigo_maiz2da'],
+            step=10
+        )
+        
+        # Soja 1ra como único cultivo
+        soja1ra_sola = st.number_input(
+            "Soja 1ra (ha)",
+            min_value=0,
+            value=st.session_state.rotaciones['soja1ra_sola'],
+            step=10
+        )
+        
+        # Maíz como único cultivo
+        maiz_solo = st.number_input(
+            "Maíz (ha)",
+            min_value=0,
+            value=st.session_state.rotaciones['maiz_solo'],
+            step=10
+        )
+        
+        # Maíz tardío
+        maiz_tardio = st.number_input(
+            "Maíz Tardío (ha)",
+            min_value=0,
+            value=st.session_state.rotaciones['maiz_tardio'],
+            step=10
+        )
+        
+        # Girasol como único cultivo
+        girasol_solo = st.number_input(
+            "Girasol (ha)",
+            min_value=0,
+            value=st.session_state.rotaciones['girasol_solo'],
+            step=10
+        )
+        
+        # Guardar valores en session_state
+        if st.button("Actualizar Rotaciones"):
+            st.session_state.rotaciones['trigo_soja2da'] = trigo_soja2da
+            st.session_state.rotaciones['trigo_maiz2da'] = trigo_maiz2da
+            st.session_state.rotaciones['soja1ra_sola'] = soja1ra_sola
+            st.session_state.rotaciones['maiz_solo'] = maiz_solo
+            st.session_state.rotaciones['maiz_tardio'] = maiz_tardio
+            st.session_state.rotaciones['girasol_solo'] = girasol_solo
+            st.success("Rotaciones actualizadas correctamente")
+    
+    # Calcular totales por cultivo
+    total_trigo = trigo_soja2da + trigo_maiz2da
+    total_soja2da = trigo_soja2da
+    total_maiz2da = trigo_maiz2da
+    total_soja1ra = soja1ra_sola
+    total_maiz = maiz_solo
+    total_maiz_tardio = maiz_tardio
+    total_girasol = girasol_solo
+    
+    # Superficie total
+    total_superficie = (
+        total_trigo +     # Trigo (ya incluye la superficie que luego se usa para 2da)
+        total_soja1ra +   # Soja 1ra
+        total_maiz +      # Maíz
+        total_maiz_tardio + # Maíz tardío
+        total_girasol     # Girasol
+    )
+    
+    # Superficie efectiva (contando doble ocupación)
+    total_superficie_efectiva = (
+        total_trigo +     # Trigo 
+        total_soja2da +   # Soja 2da
+        total_maiz2da +   # Maíz 2da
+        total_soja1ra +   # Soja 1ra
+        total_maiz +      # Maíz
+        total_maiz_tardio + # Maíz tardío
+        total_girasol     # Girasol
+    )
+    
+    with col2:
+        st.subheader("Resumen de Superficie por Cultivo")
+        
+        # Crear DataFrame de superficie por cultivo
+        superficie_cultivos = {
+            "Cultivo": ["Trigo", "Soja 2da", "Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"],
+            "Superficie (ha)": [total_trigo, total_soja2da, total_maiz2da, total_soja1ra, total_maiz, total_maiz_tardio, total_girasol],
+            "% del Total": [
+                f"{(total_trigo/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
+                f"{(total_soja2da/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
+                f"{(total_maiz2da/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
+                f"{(total_soja1ra/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
+                f"{(total_maiz/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
+                f"{(total_maiz_tardio/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%",
+                f"{(total_girasol/total_superficie_efectiva*100) if total_superficie_efectiva > 0 else 0:.1f}%"
+            ]
+        }
+        
+        df_superficie = pd.DataFrame(superficie_cultivos)
+        st.dataframe(df_superficie, hide_index=True, use_container_width=True)
+        
+        # Mostrar totales
+        st.info(f"Superficie física total: {total_superficie} ha")
+        st.info(f"Superficie efectiva (incluyendo doble cultivo): {total_superficie_efectiva} ha")
+        st.info(f"Intensidad de uso: {(total_superficie_efectiva/total_superficie*100) if total_superficie > 0 else 0:.1f}%")
+    
+    # Gráficos de rotación
+    st.subheader("Visualización de Rotaciones")
+    
+    # Gráfico de torta de distribución de cultivos
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Distribución por Cultivo")
+        
+        # Datos para gráfico
+        cultivos_labels = ["Trigo", "Soja 2da", "Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"]
+        cultivos_values = [total_trigo, total_soja2da, total_maiz2da, total_soja1ra, total_maiz, total_maiz_tardio, total_girasol]
+        
+        # Filtrar solo valores mayores que cero
+        filtered_labels = [label for label, value in zip(cultivos_labels, cultivos_values) if value > 0]
+        filtered_values = [value for value in cultivos_values if value > 0]
+        
+        # Crear dataframe para pie chart
+        chart_data = pd.DataFrame({
+            'Cultivo': filtered_labels,
+            'Superficie': filtered_values
+        })
+        
+        # Streamlit no tiene gráfico de torta nativo, usamos matplotlib a través de st.pyplot
+        import matplotlib.pyplot as plt
+        
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.pie(chart_data['Superficie'], labels=chart_data['Cultivo'], autopct='%1.1f%%')
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+        plt.title('Distribución de Superficie por Cultivo')
+        
+        st.pyplot(fig)
+    
+    with col2:
+        st.subheader("Distribución por Tipo de Rotación")
+        
+        # Datos para gráfico
+        rotaciones_labels = ["Trigo + Soja 2da", "Trigo + Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"]
+        rotaciones_values = [trigo_soja2da, trigo_maiz2da, soja1ra_sola, maiz_solo, maiz_tardio, girasol_solo]
+        
+        # Filtrar solo valores mayores que cero
+        filtered_labels = [label for label, value in zip(rotaciones_labels, rotaciones_values) if value > 0]
+        filtered_values = [value for value in rotaciones_values if value > 0]
+        
+        # Crear dataframe para pie chart
+        chart_data = pd.DataFrame({
+            'Rotación': filtered_labels,
+            'Superficie': filtered_values
+        })
+        
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.pie(chart_data['Superficie'], labels=chart_data['Rotación'], autopct='%1.1f%%')
+        ax.axis('equal')
+        plt.title('Distribución por Tipo de Rotación')
+        
+        st.pyplot(fig)
+    
+    # Análisis económico de las rotaciones
+    st.subheader("Análisis Económico de Rotaciones")
+    
+    # Índices para obtener márgenes
+    idx_margen_bruto = df_comparativo[df_comparativo["Variable"] == "Margen Bruto / ha"].index[0]
+    idx_margen_directo = df_comparativo[df_comparativo["Variable"] == "Margen Directo / ha"].index[0]
+    
+    # Obtener márgenes por cultivo
+    margen_bruto_trigo = df_comparativo.iloc[idx_margen_bruto]["Trigo"]
+    margen_bruto_soja2da = df_comparativo.iloc[idx_margen_bruto]["Soja 2da"]
+    margen_bruto_maiz2da = df_comparativo.iloc[idx_margen_bruto]["Maíz 2da"]
+    margen_bruto_soja1ra = df_comparativo.iloc[idx_margen_bruto]["Soja 1ra"]
+    margen_bruto_maiz = df_comparativo.iloc[idx_margen_bruto]["Maíz"]
+    margen_bruto_maiztardio = df_comparativo.iloc[idx_margen_bruto]["Maíz Tardío"]
+    margen_bruto_girasol = df_comparativo.iloc[idx_margen_bruto]["Girasol"]
+    
+    margen_directo_trigo = df_comparativo.iloc[idx_margen_directo]["Trigo"]
+    margen_directo_soja2da = df_comparativo.iloc[idx_margen_directo]["Soja 2da"]
+    margen_directo_maiz2da = df_comparativo.iloc[idx_margen_directo]["Maíz 2da"]
+    margen_directo_soja1ra = df_comparativo.iloc[idx_margen_directo]["Soja 1ra"]
+    margen_directo_maiz = df_comparativo.iloc[idx_margen_directo]["Maíz"]
+    margen_directo_maiztardio = df_comparativo.iloc[idx_margen_directo]["Maíz Tardío"]
+    margen_directo_girasol = df_comparativo.iloc[idx_margen_directo]["Girasol"]
+    
+    # Calcular márgenes por rotación
+    margen_bruto_trigosoja2da = margen_bruto_trigo + margen_bruto_soja2da
+    margen_bruto_trigomaiz2da = margen_bruto_trigo + margen_bruto_maiz2da
+    
+    margen_directo_trigosoja2da = margen_directo_trigo + margen_directo_soja2da
+    margen_directo_trigomaiz2da = margen_directo_trigo + margen_directo_maiz2da
+    
+    # Crear tabla de resultados económicos por rotación
+    rotaciones_economico = {
+        "Rotación": [
+            "Trigo + Soja 2da", 
+            "Trigo + Maíz 2da", 
+            "Soja 1ra", 
+            "Maíz", 
+            "Maíz Tardío", 
+            "Girasol"
+        ],
+        "Superficie (ha)": [
+            trigo_soja2da,
+            trigo_maiz2da,
+            soja1ra_sola,
+            maiz_solo,
+            maiz_tardio,
+            girasol_solo
+        ],
+        "Margen Bruto (USD/ha)": [
+            margen_bruto_trigosoja2da,
+            margen_bruto_trigomaiz2da,
+            margen_bruto_soja1ra,
+            margen_bruto_maiz,
+            margen_bruto_maiztardio,
+            margen_bruto_girasol
+        ],
+        "Margen Directo (USD/ha)": [
+            margen_directo_trigosoja2da,
+            margen_directo_trigomaiz2da,
+            margen_directo_soja1ra,
+            margen_directo_maiz,
+            margen_directo_maiztardio,
+            margen_directo_girasol
+        ],
+        "Margen Bruto Total (USD)": [
+            margen_bruto_trigosoja2da * trigo_soja2da,
+            margen_bruto_trigomaiz2da * trigo_maiz2da,
+            margen_bruto_soja1ra * soja1ra_sola,
+            margen_bruto_maiz * maiz_solo,
+            margen_bruto_maiztardio * maiz_tardio,
+            margen_bruto_girasol * girasol_solo
+        ],
+        "Margen Directo Total (USD)": [
+            margen_directo_trigosoja2da * trigo_soja2da,
+            margen_directo_trigomaiz2da * trigo_maiz2da,
+            margen_directo_soja1ra * soja1ra_sola,
+            margen_directo_maiz * maiz_solo,
+            margen_directo_maiztardio * maiz_tardio,
+            margen_directo_girasol * girasol_solo
+        ]
+    }
+    
+    df_economia_rotaciones = pd.DataFrame(rotaciones_economico)
+    
+    # Agregar fila de totales
+    total_row = {
+        "Rotación": "TOTAL",
+        "Superficie (ha)": sum(df_economia_rotaciones["Superficie (ha)"]),
+        "Margen Bruto (USD/ha)": sum(df_economia_rotaciones["Margen Bruto Total (USD)"]) / sum(df_economia_rotaciones["Superficie (ha)"]) if sum(df_economia_rotaciones["Superficie (ha)"]) > 0 else 0,
+        "Margen Directo (USD/ha)": sum(df_economia_rotaciones["Margen Directo Total (USD)"]) / sum(df_economia_rotaciones["Superficie (ha)"]) if sum(df_economia_rotaciones["Superficie (ha)"]) > 0 else 0,
+        "Margen Bruto Total (USD)": sum(df_economia_rotaciones["Margen Bruto Total (USD)"]),
+        "Margen Directo Total (USD)": sum(df_economia_rotaciones["Margen Directo Total (USD)"])
+    }
+    
+    # Añadir fila de totales al dataframe
+    df_economia_rotaciones = pd.concat([df_economia_rotaciones, pd.DataFrame([total_row])], ignore_index=True)
+    
+    # Mostrar tabla económica
+    st.dataframe(df_economia_rotaciones, hide_index=True, use_container_width=True)
+    
+    # Gráfico comparativo de márgenes por rotación
+    st.subheader("Comparativa de Márgenes por Rotación")
+    
+    # Excluir la fila de totales
+    df_grafico = df_economia_rotaciones[:-1].copy()
+    
+    # Filtrar rotaciones con superficie > 0
+    df_grafico = df_grafico[df_grafico["Superficie (ha)"] > 0]
+    
+    # Crear dataframe para gráfico
+    chart_data = pd.DataFrame({
+        "Margen Bruto (USD/ha)": df_grafico["Margen Bruto (USD/ha)"],
+        "Margen Directo (USD/ha)": df_grafico["Margen Directo (USD/ha)"]
+    }, index=df_grafico["Rotación"])
+    
+    st.bar_chart(chart_data)
+    
+    # Análisis de riesgo (versión simple)
+    st.subheader("Variabilidad de rendimientos por cultivo")
+    st.markdown("""
+    En esta sección podemos evaluar cómo diferentes variaciones en el rendimiento 
+    (clima, manejo, etc.) afectan el resultado económico.
+    """)
+    
+    # Escenarios de rendimiento
+    # Para simplificar, asumimos que el rendimiento puede variar ±20%
+    rendimientos = {
+        "Cultivo": ["Trigo", "Soja 2da", "Maíz 2da", "Soja 1ra", "Maíz", "Maíz Tardío", "Girasol"],
+        "Rendimiento Base (tn/ha)": [
+            df_comparativo.iloc[idx_rendimiento]["Trigo"],
+            df_comparativo.iloc[idx_rendimiento]["Soja 2da"],
+            df_comparativo.iloc[idx_rendimiento]["Maíz 2da"],
+            df_comparativo.iloc[idx_rendimiento]["Soja 1ra"],
+            df_comparativo.iloc[idx_rendimiento]["Maíz"],
+            df_comparativo.iloc[idx_rendimiento]["Maíz Tardío"],
+            df_comparativo.iloc[idx_rendimiento]["Girasol"]
+        ],
+        "Rinde Bajo (-20%)": [
+            df_comparativo.iloc[idx_rendimiento]["Trigo"] * 0.8,
+            df_comparativo.iloc[idx_rendimiento]["Soja 2da"] * 0.8,
+            df_comparativo.iloc[idx_rendimiento]["Maíz 2da"] * 0.8,
+            df_comparativo.iloc[idx_rendimiento]["Soja 1ra"] * 0.8,
+            df_comparativo.iloc[idx_rendimiento]["Maíz"] * 0.8,
+            df_comparativo.iloc[idx_rendimiento]["Maíz Tardío"] * 0.8,
+            df_comparativo.iloc[idx_rendimiento]["Girasol"] * 0.8
+        ],
+        "Rinde Alto (+20%)": [
+            df_comparativo.iloc[idx_rendimiento]["Trigo"] * 1.2,
+            df_comparativo.iloc[idx_rendimiento]["Soja 2da"] * 1.2,
+            df_comparativo.iloc[idx_rendimiento]["Maíz 2da"] * 1.2,
+            df_comparativo.iloc[idx_rendimiento]["Soja 1ra"] * 1.2,
+            df_comparativo.iloc[idx_rendimiento]["Maíz"] * 1.2,
+            df_comparativo.iloc[idx_rendimiento]["Maíz Tardío"] * 1.2,
+            df_comparativo.iloc[idx_rendimiento]["Girasol"] * 1.2
+        ]
+    }
+    
+    df_rendimientos = pd.DataFrame(rendimientos)
+    st.dataframe(df_rendimientos, hide_index=True, use_container_width=True)
+    
+    # Mostrar un mensaje final
+    st.info(f"""
+    Conclusión: La rotación más rentable por hectárea es 
+    **{df_grafico.loc[df_grafico['Margen Directo (USD/ha)'].idxmax(), 'Rotación']}** 
+    con un margen directo de 
+    **USD {df_grafico['Margen Directo (USD/ha)'].max():.2f}/ha**.
+    """)
+
+# Pestaña 4: Ayuda
+with tab4:
     st.header("Ayuda y Documentación")
     
     st.subheader("¿Cómo usar esta aplicación?")
     st.markdown("""
-    Esta aplicación te permite comparar los márgenes de diferentes cultivos. Sigue estos pasos:
+    Esta aplicación te permite comparar los márgenes de diferentes cultivos y planificar rotaciones. Sigue estos pasos:
     
     1. En la pestaña **Tabla Comparativa**:
        - Observa los datos comparativos de todos los cultivos
@@ -227,6 +594,12 @@ with tab3:
        - Modifica los costos directos, gastos de comercialización, estructura y cosecha
        - Configura el tipo de arrendamiento (por hectárea o en quintales de soja)
        - Observa los resultados y las visualizaciones
+       
+    3. En la pestaña **Rotaciones**:
+       - Configura la cantidad de hectáreas para cada rotación
+       - Observa la distribución de superficie por cultivo
+       - Analiza los márgenes económicos por rotación
+       - Compara la rentabilidad de diferentes esquemas de rotación
     """)
     
     st.subheader("Glosario de Términos")
@@ -234,20 +607,28 @@ with tab3:
         "Margen Bruto": "Ingreso Bruto - Costos Directos - Gastos Comercialización - Estructura - Cosecha",
         "Margen Directo": "Margen Bruto - Arrendamiento",
         "Factor de Ocupación": "Ajuste para cultivos de segunda (que ocupan el campo durante medio año)",
-        "Retorno sobre costos": "Porcentaje que representa el Margen Directo respecto a los costos totales"
+        "Retorno sobre costos": "Porcentaje que representa el Margen Directo respecto a los costos totales",
+        "Cultivo de primera": "Ocupa el campo durante toda la temporada (ej. Soja 1ra, Maíz)",
+        "Cultivo de segunda": "Se siembra después de la cosecha de otro cultivo (ej. Soja 2da después de Trigo)",
+        "Intensidad de uso": "Relación entre la superficie efectiva (contando doble cultivo) y la superficie física total"
     }
     
     for term, definition in terms.items():
         st.markdown(f"**{term}**: {definition}")
     
-    st.subheader("Próximas funcionalidades")
+    st.subheader("Sobre las Rotaciones")
     st.markdown("""
-    En próximas versiones, planeamos añadir:
+    Las rotaciones de cultivos son fundamentales para la sustentabilidad del sistema agrícola:
     
-    - Configuración detallada de hectáreas propias y arrendadas
-    - Flujo de caja mensual
-    - Análisis de riesgo y sensibilidad
-    - Comparativa de escenarios
+    - **Beneficios agronómicos**: Mejora la fertilidad del suelo, reduce problemas de malezas, plagas y enfermedades.
+    - **Beneficios económicos**: Diversifica riesgos, optimiza el uso de la tierra, reduce costos de insumos.
+    - **Esquemas comunes**: 
+      - Trigo seguido de Soja 2da
+      - Trigo seguido de Maíz 2da
+      - Maíz - Soja 1ra (alternancia anual)
+    
+    La elección de la rotación depende de diversos factores como el tipo de suelo, régimen de lluvias, 
+    capacidad operativa, disponibilidad de maquinaria y consideraciones económicas.
     """)
 
 # Pie de página

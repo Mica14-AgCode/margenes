@@ -3,7 +3,39 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
+import pandas as pd
+import numpy as np
 
+# Intentar instalar plotly
+import subprocess
+import sys
+
+# Mostrar mensaje al usuario
+st.write("Intentando instalar plotly...")
+
+# Intentar instalación
+try:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "plotly"])
+    st.success("¡Plotly instalado correctamente!")
+except Exception as e:
+    st.error(f"Error al instalar plotly: {e}")
+
+# Ahora intentar importar
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    st.success("¡Plotly importado correctamente!")
+except ImportError:
+    st.error("No se pudo importar plotly a pesar de la instalación")
+    # Definir variables vacías para evitar errores
+    class DummyModule:
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+    px = DummyModule()
+    go = DummyModule()
+
+# Continuar con el resto del código
 # Configuración de la página
 st.set_page_config(
     page_title="Calculadora de Márgenes Agrícolas",

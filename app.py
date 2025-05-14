@@ -87,32 +87,41 @@ def calcular_costo_flete(km, df_fletes, recargo=0):
     Retorna:
     - Costo del flete por tonelada en pesos argentinos
     """
-    # Verificamos límites
-    if km <= df_fletes['KM'].min():
-        costo = df_fletes.loc[df_fletes['KM'] == df_fletes['KM'].min(), 'Tarifa_$/TN'].values[0]
-    elif km >= df_fletes['KM'].max():
-        costo = df_fletes.loc[df_fletes['KM'] == df_fletes['KM'].max(), 'Tarifa_$/TN'].values[0]
-    else:
-        # Buscar los valores cercanos en la tabla
-        # Encontrar el punto de la tabla más cercano por debajo
-        valor_inferior = df_fletes[df_fletes['KM'] <= km]['KM'].max()
-        # Encontrar el punto de la tabla más cercano por encima
-        valor_superior = df_fletes[df_fletes['KM'] >= km]['KM'].min()
+    try:
+        # Verificamos límites
+        if km <= df_fletes['KM'].min():
+            costo = df_fletes.loc[df_fletes['KM'] == df_fletes['KM'].min(), 'Tarifa_$/TN'].values[0]
+        elif km >= df_fletes['KM'].max():
+            costo = df_fletes.loc[df_fletes['KM'] == df_fletes['KM'].max(), 'Tarifa_$/TN'].values[0]
+        else:
+            # Buscar los valores cercanos en la tabla
+            # Encontrar el punto de la tabla más cercano por debajo
+            valor_inferior = df_fletes[df_fletes['KM'] <= km]['KM'].max()
+            # Encontrar el punto de la tabla más cercano por encima
+            valor_superior = df_fletes[df_fletes['KM'] >= km]['KM'].min()
+            
+            # Verificar que los valores no sean idénticos para evitar división por cero
+            if valor_superior == valor_inferior:
+                costo = df_fletes.loc[df_fletes['KM'] == valor_superior, 'Tarifa_$/TN'].values[0]
+            else:
+                # Obtener los costos correspondientes
+                costo_inferior = df_fletes.loc[df_fletes['KM'] == valor_inferior, 'Tarifa_$/TN'].values[0]
+                costo_superior = df_fletes.loc[df_fletes['KM'] == valor_superior, 'Tarifa_$/TN'].values[0]
+                
+                # Interpolación lineal
+                # (y - y1) / (x - x1) = (y2 - y1) / (x2 - x1)
+                # y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+                costo = costo_inferior + (km - valor_inferior) * (costo_superior - costo_inferior) / (valor_superior - valor_inferior)
         
-        # Obtener los costos correspondientes
-        costo_inferior = df_fletes.loc[df_fletes['KM'] == valor_inferior, 'Tarifa_$/TN'].values[0]
-        costo_superior = df_fletes.loc[df_fletes['KM'] == valor_superior, 'Tarifa_$/TN'].values[0]
+        # Aplicar recargo si corresponde
+        if recargo > 0:
+            costo = costo * (1 + recargo/100)
         
-        # Interpolación lineal
-        # (y - y1) / (x - x1) = (y2 - y1) / (x2 - x1)
-        # y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
-        costo = costo_inferior + (km - valor_inferior) * (costo_superior - costo_inferior) / (valor_superior - valor_inferior)
-    
-    # Aplicar recargo si corresponde
-    if recargo > 0:
-        costo = costo * (1 + recargo/100)
-    
-    return costo
+        return costo
+    except Exception as e:
+        # En caso de error, devolver un valor predeterminado y mostrar advertencia
+        st.warning(f"Error al calcular el costo del flete: {str(e)}. Usando valor predeterminado de 30.")
+        return 30.0  # Valor predeterminado en caso de error
 
 # Título y descripción
 st.title("📊 Calculadora de Márgenes Agrícolas")
@@ -399,8 +408,8 @@ with tab2:
         ["Estructura Total", "USD " + str(round(estructura_total))],
         ["Cosecha/ha", "USD " + str(round(costos_cosecha)) + "/ha"],
         ["Cosecha Total", "USD " + str(round(cosecha_total))],
-        ["Flete/ha", "USD " + str(round(costo_flete_ha)) + "/ha"],
-        ["Flete Total", "USD " + str(round(costo_flete_total))],
+        ["Flete/ha", "USD " + str(int(costo_flete_ha)) + "/ha"],
+        ["Flete Total", "USD " + str(int(costo_flete_total))],
         ["Arrendamiento/ha (ajustado)", "USD " + str(round(arrendamiento_ajustado * proporcion_arrendadas)) + "/ha"],
         ["Arrendamiento Total", "USD " + str(round(arrendamiento_total))],
         ["Margen Bruto/ha", "USD " + str(round(margen_bruto_ha)) + "/ha"],

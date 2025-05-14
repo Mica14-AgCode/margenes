@@ -1,3 +1,15 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+
+# IMPORTANTE: set_page_config DEBE ser el primer comando de Streamlit
+st.set_page_config(
+    page_title="Calculadora de Márgenes Agrícolas",
+    page_icon="🌱",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Función para cargar y procesar la tabla de fletes
 def cargar_tabla_fletes():
     # Definición de la tabla de fletes según la imagen proporcionada
@@ -24,44 +36,6 @@ def cargar_tabla_fletes():
 90,19359,190,30738,290,42763,390,53337,490,61054,1000,83271
 95,20141,195,31332,295,43426,395,57865,495,61426,1050,85462
 100,20962,200,31935,300,44096,400,54393,500,61794,1100,87551"""
-    
-    # Procesamos la tabla para convertirla en un DataFrame
-    # Primero construimos las listas de KM y USDimport streamlit as st
-import pandas as pd
-import numpy as np
-
-# IMPORTANTE: set_page_config DEBE ser el primer comando de Streamlit
-st.set_page_config(
-    page_title="Calculadora de Márgenes Agrícolas",
-    page_icon="🌱",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Función para cargar y procesar la tabla de fletes
-def cargar_tabla_fletes():
-    # Definición de la tabla de fletes según la imagen proporcionada
-    data = """KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN
-5,7.429,105,21.465,205,32.492,305,44.598,405,54.765,520,62.717
-10,7.429,110,21.976,210,33.051,310,45.100,410,55.135,540,63.617
-15,8.334,115,22.487,215,33.617,315,45.603,415,55.505,560,64.494
-20,9.331,120,23.001,220,34.186,320,46.108,420,55.876,580,65.354
-25,10.242,125,23.523,225,34.762,325,46.613,425,56.245,600,66.192
-30,11.267,130,24.048,230,35.344,330,47.120,430,56.615,620,67.011
-35,11.926,135,24.576,235,35.930,335,47.631,435,56.986,640,67.811
-40,12.609,140,25.109,240,36.519,340,48.143,440,57.356,660,68.593
-45,13.314,145,25.649,245,37.117,345,48.654,445,57.728,680,69.358
-50,14.048,150,26.190,250,37.718,350,49.167,450,58.095,700,70.106
-55,14.644,155,26.742,255,38.325,355,49.685,455,58.466,725,71.509
-60,15.253,160,27.293,260,38.942,360,50.201,460,58.836,750,72.886
-65,15.881,165,27.853,265,39.560,365,50.718,465,59.206,775,74.241
-70,16.526,170,28.418,270,40.187,370,51.240,470,59.574,800,75.573
-75,17.197,175,28.988,275,40.821,375,51.762,475,59.946,850,77.598
-80,17.889,180,29.565,280,41.460,380,52.283,480,60.316,900,79.556
-85,18.609,185,30.147,285,42.110,385,52.809,485,60.684,950,81.444
-90,19.359,190,30.738,290,42.763,390,53.337,490,61.054,1000,83.271
-95,20.141,195,31.332,295,43.426,395,57.865,495,61.426,1050,85.462
-100,20.962,200,31.935,300,44.096,400,54.393,500,61.794,1100,87.551"""
     
     # Procesamos la tabla para convertirla en un DataFrame
     # Primero construimos las listas de KM y $/TN
@@ -148,8 +122,8 @@ def calcular_costo_flete(km, df_fletes, recargo=0):
         return costo
     except Exception as e:
         # En caso de error, devolver un valor predeterminado y mostrar advertencia
-        st.warning(f"Error al calcular el costo del flete: {str(e)}. Usando valor predeterminado de 30.")
-        return 30.0  # Valor predeterminado en caso de error
+        st.warning(f"Error al calcular el costo del flete: {str(e)}. Usando valor predeterminado de 30000.")
+        return 30000.0  # Valor predeterminado en caso de error
 
 # Título y descripción
 st.title("📊 Calculadora de Márgenes Agrícolas")

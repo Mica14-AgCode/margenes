@@ -384,34 +384,50 @@ with tab2:
     st.markdown("---")
     st.header("Resultados")
     
-    # Mostrar tabla de resultados
+    # Crear lista de conceptos y valores
+    conceptos = [
+        "Superficie", "Rendimiento", "Precio", 
+        "Ingreso Bruto/ha", "Ingreso Bruto Total",
+        "Costos Directos/ha", "Costos Directos Total",
+        "Gastos Comercialización/ha", "Gastos Comercialización Total",
+        "Estructura/ha", "Estructura Total",
+        "Cosecha/ha", "Cosecha Total",
+        "Flete/ha", "Flete Total",
+        "Arrendamiento/ha (ajustado)", "Arrendamiento Total",
+        "Margen Bruto/ha", "Margen Bruto Total",
+        "Margen Directo/ha", "Margen Directo Total",
+        "Retorno sobre costos (%)"
+    ]
+    
+    valores = [
+        f"{superficie} ha", 
+        f"{rendimiento} tn/ha", 
+        f"USD {precio}/tn",
+        f"USD {round(ingreso_bruto_ha)}/ha", 
+        f"USD {round(ingreso_bruto_total)}",
+        f"USD {round(total_costos_directos)}/ha", 
+        f"USD {round(costos_directos_total)}",
+        f"USD {round(costos_comercializacion)}/ha", 
+        f"USD {round(gastos_comercializacion_total)}",
+        f"USD {round(costos_estructura)}/ha", 
+        f"USD {round(estructura_total)}",
+        f"USD {round(costos_cosecha)}/ha", 
+        f"USD {round(cosecha_total)}",
+        f"USD {round(costo_flete_ha)}/ha", 
+        f"USD {round(costo_flete_total)}",
+        f"USD {round(arrendamiento_ajustado * proporcion_arrendadas)}/ha", 
+        f"USD {round(arrendamiento_total)}",
+        f"USD {round(margen_bruto_ha)}/ha", 
+        f"USD {round(margen_bruto_total)}",
+        f"USD {round(margen_directo_ha)}/ha", 
+        f"USD {round(margen_directo_total)}",
+        f"{round(retorno_costos, 1)}%"
+    ]
+    
+    # Crear DataFrame para mostrar resultados
     results_data = {
-        "Concepto": [
-            "Superficie", "Rendimiento", "Precio", 
-            "Ingreso Bruto/ha", "Ingreso Bruto Total",
-            "Costos Directos/ha", "Costos Directos Total",
-            "Gastos Comercialización/ha", "Gastos Comercialización Total",
-            "Estructura/ha", "Estructura Total",
-            "Cosecha/ha", "Cosecha Total",
-            "Flete/ha", "Flete Total",  # Nueva línea para flete
-            "Arrendamiento/ha (ajustado)", "Arrendamiento Total",
-            "Margen Bruto/ha", "Margen Bruto Total",
-            "Margen Directo/ha", "Margen Directo Total",
-            "Retorno sobre costos (%)"
-        ],
-        "Valor": [
-            f"{superficie} ha", f"{rendimiento} tn/ha", f"USD {precio}/tn",
-            f"USD {round(ingreso_bruto_ha)}/ha", f"USD {round(ingreso_bruto_total)}",
-            f"USD {round(total_costos_directos)}/ha", f"USD {round(costos_directos_total)}",
-            f"USD {round(costos_comercializacion)}/ha", f"USD {round(gastos_comercializacion_total)}",
-            f"USD {round(costos_estructura)}/ha", f"USD {round(estructura_total)}",
-            f"USD {round(costos_cosecha)}/ha", f"USD {round(cosecha_total)}",
-            f"USD {round(costo_flete_ha)}/ha", f"USD {round(costo_flete_total)}",
-            f"USD {round(arrendamiento_ajustado * proporcion_arrendadas)}/ha", f"USD {round(arrendamiento_total)}",
-            f"USD {round(margen_bruto_ha)}/ha", f"USD {round(margen_bruto_total)}",
-            f"USD {round(margen_directo_ha)}/ha", f"USD {round(margen_directo_total)}",
-            f"{round(retorno_costos, 1)}%"
-        ]
+        "Concepto": conceptos,
+        "Valor": valores
     }
     
     results_df = pd.DataFrame(results_data)

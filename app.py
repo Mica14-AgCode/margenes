@@ -326,6 +326,7 @@ with tab2:
             
             # Calculamos el costo
             costo_ars = calcular_costo_flete(km_actual, df_fletes, recargo_total)
+            # Convertimos de pesos a dólares usando el tipo de cambio
             costo_flete_usd_tn = costo_ars / tipo_cambio
             
             # Mostrar resultado
@@ -335,6 +336,7 @@ with tab2:
             st.info(f"""
             Distancia: {km_actual} km
             {"Con recargo de " + str(recargo_total) + "%" if recargo_total > 0 else "Sin recargos"}
+            Tipo de cambio: ${tipo_cambio}/USD
             """)
     
     elif tipo_flete == "Ingreso manual ($/tn)":
@@ -343,6 +345,7 @@ with tab2:
         with col1:
             flete_ars = st.number_input("Costo de flete ($/tn)", min_value=0.0, value=30000.0, step=1000.0)
             tipo_cambio = st.number_input("Tipo de cambio ($/USD)", min_value=1.0, value=950.0, step=10.0)
+            # Convertimos de pesos a dólares
             costo_flete_usd_tn = flete_ars / tipo_cambio
             
             st.info(f"Equivalente a USD {costo_flete_usd_tn:.2f}/tn")
@@ -350,6 +353,7 @@ with tab2:
     else:  # Ingreso manual (USD/tn)
         costo_flete_usd_tn = st.number_input("Costo de flete (USD/tn)", min_value=0.0, value=31.5, step=0.5)
         tipo_cambio = st.number_input("Tipo de cambio ($/USD)", min_value=1.0, value=950.0, step=10.0) 
+        # Convertimos de dólares a pesos
         flete_ars = costo_flete_usd_tn * tipo_cambio
         
         st.info(f"Equivalente a $ {flete_ars:.2f}/tn")
@@ -374,6 +378,8 @@ with tab2:
     arrendamiento_total = arrendamiento_ajustado * superficie * proporcion_arrendadas
     
     # Costo de flete por hectárea y total
+    # La tabla muestra valores en $/TN (pesos por tonelada)
+    # Convertimos a USD/TN para usar en los cálculos
     costo_flete_ha = rendimiento * costo_flete_usd_tn
     costo_flete_total = costo_flete_ha * superficie
     

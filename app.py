@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # IMPORTANTE: set_page_config DEBE ser el primer comando de Streamlit
 st.set_page_config(
@@ -9,6 +10,110 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Función para cargar y procesar la tabla de fletes
+def cargar_tabla_fletes():
+    # Definición de la tabla de fletes según la imagen proporcionada
+    data = """KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN,KM,$/TN
+5,7.429,105,21.465,205,32.492,305,44.598,405,54.765,520,62.717
+10,7.429,110,21.976,210,33.051,310,45.100,410,55.135,540,63.617
+15,8.334,115,22.487,215,33.617,315,45.603,415,55.505,560,64.494
+20,9.331,120,23.001,220,34.186,320,46.108,420,55.876,580,65.354
+25,10.242,125,23.523,225,34.762,325,46.613,425,56.245,600,66.192
+30,11.267,130,24.048,230,35.344,330,47.120,430,56.615,620,67.011
+35,11.926,135,24.576,235,35.930,335,47.631,435,56.986,640,67.811
+40,12.609,140,25.109,240,36.519,340,48.143,440,57.356,660,68.593
+45,13.314,145,25.649,245,37.117,345,48.654,445,57.728,680,69.358
+50,14.048,150,26.190,250,37.718,350,49.167,450,58.095,700,70.106
+55,14.644,155,26.742,255,38.325,355,49.685,455,58.466,725,71.509
+60,15.253,160,27.293,260,38.942,360,50.201,460,58.836,750,72.886
+65,15.881,165,27.853,265,39.560,365,50.718,465,59.206,775,74.241
+70,16.526,170,28.418,270,40.187,370,51.240,470,59.574,800,75.573
+75,17.197,175,28.988,275,40.821,375,51.762,475,59.946,850,77.598
+80,17.889,180,29.565,280,41.460,380,52.283,480,60.316,900,79.556
+85,18.609,185,30.147,285,42.110,385,52.809,485,60.684,950,81.444
+90,19.359,190,30.738,290,42.763,390,53.337,490,61.054,1000,83.271
+95,20.141,195,31.332,295,43.426,395,57.865,495,61.426,1050,85.462
+100,20.962,200,31.935,300,44.096,400,54.393,500,61.794,1100,87.551"""
+    
+    # Procesamos la tabla para convertirla en un DataFrame
+    # Primero construimos las listas de KM y $/TN
+    filas = data.strip().split('\n')
+    
+    # Primero procesamos el encabezado para saber cuántas columnas hay
+    encabezado = filas[0].split(',')
+    num_columnas = len(encabezado) // 2
+    
+    # Inicializamos listas para KM y tarifas
+    km_valores = []
+    tarifa_valores = []
+    
+    # Procesamos cada fila para extraer los pares KM, $/TN
+    for fila in filas[1:]:  # Saltamos la fila de encabezado
+        valores = fila.split(',')
+        for i in range(num_columnas):
+            idx_km = i * 2
+            idx_tarifa = idx_km + 1
+            if idx_tarifa < len(valores):  # Verificamos que no nos pasemos del límite
+                try:
+                    km = float(valores[idx_km])
+                    tarifa = float(valores[idx_tarifa])
+                    km_valores.append(km)
+                    tarifa_valores.append(tarifa)
+                except (ValueError, IndexError):
+                    pass  # Ignoramos valores que no podemos convertir
+    
+    # Creamos el DataFrame
+    df_fletes = pd.DataFrame({
+        'KM': km_valores,
+        'Tarifa_$/TN': tarifa_valores
+    })
+    
+    # Ordenamos por KM para asegurar que la interpolación funcione correctamente
+    df_fletes = df_fletes.sort_values('KM')
+    
+    return df_fletes
+
+# Función para calcular el costo del flete basado en la distancia
+def calcular_costo_flete(km, df_fletes, recargo=0):
+    """
+    Calcula el costo del flete por tonelada para una distancia dada.
+    Interpola valores para distancias que no están exactamente en la tabla.
+    
+    Parámetros:
+    - km: Distancia en kilómetros
+    - df_fletes: DataFrame con la tabla de fletes
+    - recargo: Porcentaje de recargo adicional (ej. girasol 20%)
+    
+    Retorna:
+    - Costo del flete por tonelada en pesos argentinos
+    """
+    # Verificamos límites
+    if km <= df_fletes['KM'].min():
+        costo = df_fletes.loc[df_fletes['KM'] == df_fletes['KM'].min(), 'Tarifa_$/TN'].values[0]
+    elif km >= df_fletes['KM'].max():
+        costo = df_fletes.loc[df_fletes['KM'] == df_fletes['KM'].max(), 'Tarifa_$/TN'].values[0]
+    else:
+        # Buscar los valores cercanos en la tabla
+        # Encontrar el punto de la tabla más cercano por debajo
+        valor_inferior = df_fletes[df_fletes['KM'] <= km]['KM'].max()
+        # Encontrar el punto de la tabla más cercano por encima
+        valor_superior = df_fletes[df_fletes['KM'] >= km]['KM'].min()
+        
+        # Obtener los costos correspondientes
+        costo_inferior = df_fletes.loc[df_fletes['KM'] == valor_inferior, 'Tarifa_$/TN'].values[0]
+        costo_superior = df_fletes.loc[df_fletes['KM'] == valor_superior, 'Tarifa_$/TN'].values[0]
+        
+        # Interpolación lineal
+        # (y - y1) / (x - x1) = (y2 - y1) / (x2 - x1)
+        # y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+        costo = costo_inferior + (km - valor_inferior) * (costo_superior - costo_inferior) / (valor_superior - valor_inferior)
+    
+    # Aplicar recargo si corresponde
+    if recargo > 0:
+        costo = costo * (1 + recargo/100)
+    
+    return costo
 
 # Título y descripción
 st.title("📊 Calculadora de Márgenes Agrícolas")
@@ -134,6 +239,113 @@ with tab2:
             arrendamiento = qq_arrendamiento * precio_qq_soja
             st.info(f"Arrendamiento equivalente: USD {arrendamiento}/ha")
     
+    # Nueva sección: Costos de flete
+    st.markdown("---")
+    st.subheader("Costos de Flete")
+    
+    # Cargamos la tabla de fletes
+    df_fletes = cargar_tabla_fletes()
+    
+    # Tipo de cálculo de flete
+    tipo_flete = st.radio("Método de cálculo del flete", 
+                        ["Tabla FADEEAC (por km)", "Ingreso manual ($/tn)", "Ingreso manual (USD/tn)"])
+    
+    # Contenedor para mostrar la tabla de referencia
+    with st.expander("Ver tabla de referencia de fletes"):
+        st.dataframe(df_fletes, hide_index=True)
+        st.caption("Fuente: FADEEAC ABRIL 2025")
+        st.caption("Recargos: girasol 20%, avena 10%, caminos de tierra 20%")
+    
+    # Variable para almacenar el costo de flete en USD/tn
+    costo_flete_usd_tn = 0
+    
+    if tipo_flete == "Tabla FADEEAC (por km)":
+        # División en columnas para mejor organización
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Kilómetros de flete
+            km_flete = st.number_input("Distancia (km)", min_value=1, max_value=1100, value=100, step=5)
+            
+            # Opción para personalizar por cultivo
+            personalizar_cultivo = st.checkbox("Personalizar distancia por cultivo")
+            
+            if personalizar_cultivo:
+                # Si se activa, creamos campos para cada cultivo
+                st.subheader("Distancias por cultivo (km)")
+                km_soja1ra = st.number_input("Soja 1ra", min_value=1, max_value=1100, value=km_flete, step=5)
+                km_maiz = st.number_input("Maíz", min_value=1, max_value=1100, value=km_flete, step=5)
+                km_trigo = st.number_input("Trigo", min_value=1, max_value=1100, value=km_flete, step=5)
+                km_soja2da = st.number_input("Soja 2da", min_value=1, max_value=1100, value=km_flete, step=5)
+                km_maiz2da = st.number_input("Maíz 2da", min_value=1, max_value=1100, value=km_flete, step=5) 
+                km_maiztardio = st.number_input("Maíz Tardío", min_value=1, max_value=1100, value=km_flete, step=5)
+                km_girasol = st.number_input("Girasol", min_value=1, max_value=1100, value=km_flete, step=5)
+                
+                # Creamos un diccionario para almacenar estos valores
+                km_por_cultivo = {
+                    "Soja 1ra": km_soja1ra,
+                    "Maíz": km_maiz,
+                    "Trigo": km_trigo,
+                    "Soja 2da": km_soja2da,
+                    "Maíz 2da": km_maiz2da,
+                    "Maíz Tardío": km_maiztardio,
+                    "Girasol": km_girasol
+                }
+                # Usar el valor específico para el cultivo seleccionado
+                km_actual = km_por_cultivo[cultivo]
+            else:
+                # Si no se personaliza, usamos el mismo valor para todos
+                km_actual = km_flete
+        
+        with col2:
+            # Aplicar recargos
+            st.subheader("Recargos")
+            aplicar_recargo_girasol = st.checkbox("Aplicar recargo girasol (20%)", value=True)
+            aplicar_recargo_avena = st.checkbox("Aplicar recargo avena (10%)", value=False)
+            aplicar_recargo_tierra = st.checkbox("Aplicar recargo caminos de tierra (20%)", value=False)
+            
+            # Tipo de cambio 
+            tipo_cambio = st.number_input("Tipo de cambio ($/USD)", min_value=1.0, value=950.0, step=10.0)
+            
+            # Determinamos el recargo según el cultivo
+            recargo_total = 0
+            if aplicar_recargo_girasol and cultivo == "Girasol":
+                recargo_total += 20
+            if aplicar_recargo_avena and cultivo == "Avena":  # Por si se agrega avena en el futuro
+                recargo_total += 10
+            if aplicar_recargo_tierra:
+                recargo_total += 20
+            
+            # Calculamos el costo
+            costo_ars = calcular_costo_flete(km_actual, df_fletes, recargo_total)
+            costo_flete_usd_tn = costo_ars / tipo_cambio
+            
+            # Mostrar resultado
+            st.success(f"Costo de flete calculado: $ {costo_ars:.2f}/tn (USD {costo_flete_usd_tn:.2f}/tn)")
+            
+            # Información adicional
+            st.info(f"""
+            Distancia: {km_actual} km
+            {"Con recargo de " + str(recargo_total) + "%" if recargo_total > 0 else "Sin recargos"}
+            """)
+    
+    elif tipo_flete == "Ingreso manual ($/tn)":
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            flete_ars = st.number_input("Costo de flete ($/tn)", min_value=0.0, value=30000.0, step=1000.0)
+            tipo_cambio = st.number_input("Tipo de cambio ($/USD)", min_value=1.0, value=950.0, step=10.0)
+            costo_flete_usd_tn = flete_ars / tipo_cambio
+            
+            st.info(f"Equivalente a USD {costo_flete_usd_tn:.2f}/tn")
+    
+    else:  # Ingreso manual (USD/tn)
+        costo_flete_usd_tn = st.number_input("Costo de flete (USD/tn)", min_value=0.0, value=31.5, step=0.5)
+        tipo_cambio = st.number_input("Tipo de cambio ($/USD)", min_value=1.0, value=950.0, step=10.0) 
+        flete_ars = costo_flete_usd_tn * tipo_cambio
+        
+        st.info(f"Equivalente a $ {flete_ars:.2f}/tn")
+    
     # Cálculos
     # Ingresos
     ingreso_bruto_ha = rendimiento * precio
@@ -153,8 +365,12 @@ with tab2:
     proporcion_arrendadas = 0.3  # Asumimos 30% de hectáreas arrendadas
     arrendamiento_total = arrendamiento_ajustado * superficie * proporcion_arrendadas
     
-    # Margen bruto
-    margen_bruto_ha = ingreso_bruto_ha - total_costos_directos - costos_comercializacion - costos_estructura - costos_cosecha
+    # Costo de flete por hectárea y total
+    costo_flete_ha = rendimiento * costo_flete_usd_tn
+    costo_flete_total = costo_flete_ha * superficie
+    
+    # Margen bruto (ahora restando el flete)
+    margen_bruto_ha = ingreso_bruto_ha - total_costos_directos - costos_comercializacion - costos_estructura - costos_cosecha - costo_flete_ha
     margen_bruto_total = margen_bruto_ha * superficie
     
     # Margen directo (considerando arrendamiento)
@@ -162,10 +378,11 @@ with tab2:
     margen_directo_total = margen_directo_ha * superficie
     
     # Retorno sobre costos
-    costos_totales_ha = total_costos_directos + costos_comercializacion + costos_estructura + costos_cosecha + (arrendamiento_ajustado * proporcion_arrendadas)
+    costos_totales_ha = total_costos_directos + costos_comercializacion + costos_estructura + costos_cosecha + costo_flete_ha + (arrendamiento_ajustado * proporcion_arrendadas)
     retorno_costos = (margen_directo_ha / costos_totales_ha) * 100 if costos_totales_ha > 0 else 0
     
     # Mostrar resultados
+    st.markdown("---")
     st.header("Resultados")
     
     # Mostrar tabla de resultados
@@ -177,6 +394,7 @@ with tab2:
             "Gastos Comercialización/ha", "Gastos Comercialización Total",
             "Estructura/ha", "Estructura Total",
             "Cosecha/ha", "Cosecha Total",
+            "Flete/ha", "Flete Total",  # Nueva línea para flete
             "Arrendamiento/ha (ajustado)", "Arrendamiento Total",
             "Margen Bruto/ha", "Margen Bruto Total",
             "Margen Directo/ha", "Margen Directo Total",
@@ -189,6 +407,7 @@ with tab2:
             f"USD {round(costos_comercializacion)}/ha", f"USD {round(gastos_comercializacion_total)}",
             f"USD {round(costos_estructura)}/ha", f"USD {round(estructura_total)}",
             f"USD {round(costos_cosecha)}/ha", f"USD {round(cosecha_total)}",
+            f"USD {round(costo_flete_ha)}/ha", f"USD {round(costo_flete_total)}",  # Nueva línea para flete
             f"USD {round(arrendamiento_ajustado * proporcion_arrendadas)}/ha", f"USD {round(arrendamiento_total)}",
             f"USD {round(margen_bruto_ha)}/ha", f"USD {round(margen_bruto_total)}",
             f"USD {round(margen_directo_ha)}/ha", f"USD {round(margen_directo_total)}",
@@ -203,12 +422,13 @@ with tab2:
     st.subheader("Visualizaciones")
     
     # Gráfico de distribución de ingresos y costos
-    labels = ['Costos Directos', 'Comercialización', 'Estructura', 'Cosecha', 'Arrendamiento', 'Margen Directo']
+    labels = ['Costos Directos', 'Comercialización', 'Estructura', 'Cosecha', 'Flete', 'Arrendamiento', 'Margen Directo']  # Agregado 'Flete'
     values = [
         total_costos_directos, 
         costos_comercializacion, 
         costos_estructura, 
-        costos_cosecha, 
+        costos_cosecha,
+        costo_flete_ha,  # Nuevo valor para flete
         arrendamiento_ajustado * proporcion_arrendadas,
         margen_directo_ha
     ]
@@ -374,8 +594,6 @@ with tab3:
         })
         
         # Streamlit no tiene gráfico de torta nativo, usamos matplotlib a través de st.pyplot
-        import matplotlib.pyplot as plt
-        
         fig, ax = plt.subplots(figsize=(8, 8))
         ax.pie(chart_data['Superficie'], labels=chart_data['Cultivo'], autopct='%1.1f%%')
         ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
@@ -592,6 +810,7 @@ with tab4:
        - Selecciona el cultivo que deseas evaluar
        - Ajusta los valores de superficie, rendimiento y precio
        - Modifica los costos directos, gastos de comercialización, estructura y cosecha
+       - Configura el costo del flete según distancia o monto fijo
        - Configura el tipo de arrendamiento (por hectárea o en quintales de soja)
        - Observa los resultados y las visualizaciones
        
@@ -604,13 +823,14 @@ with tab4:
     
     st.subheader("Glosario de Términos")
     terms = {
-        "Margen Bruto": "Ingreso Bruto - Costos Directos - Gastos Comercialización - Estructura - Cosecha",
+        "Margen Bruto": "Ingreso Bruto - Costos Directos - Gastos Comercialización - Estructura - Cosecha - Flete",
         "Margen Directo": "Margen Bruto - Arrendamiento",
         "Factor de Ocupación": "Ajuste para cultivos de segunda (que ocupan el campo durante medio año)",
         "Retorno sobre costos": "Porcentaje que representa el Margen Directo respecto a los costos totales",
         "Cultivo de primera": "Ocupa el campo durante toda la temporada (ej. Soja 1ra, Maíz)",
         "Cultivo de segunda": "Se siembra después de la cosecha de otro cultivo (ej. Soja 2da después de Trigo)",
-        "Intensidad de uso": "Relación entre la superficie efectiva (contando doble cultivo) y la superficie física total"
+        "Intensidad de uso": "Relación entre la superficie efectiva (contando doble cultivo) y la superficie física total",
+        "Recargos de flete": "Costos adicionales aplicados al flete según tipo de cultivo o condición de caminos"
     }
     
     for term, definition in terms.items():
@@ -630,7 +850,31 @@ with tab4:
     La elección de la rotación depende de diversos factores como el tipo de suelo, régimen de lluvias, 
     capacidad operativa, disponibilidad de maquinaria y consideraciones económicas.
     """)
+    
+    # Nueva sección de ayuda para fletes
+    st.subheader("Sobre los Costos de Flete")
+    st.markdown("""
+    El módulo de fletes te permite calcular el costo de transporte de granos de tres formas diferentes:
+    
+    1. **Tabla FADEEAC (por km)**: Calcula el costo basado en la distancia al centro de entrega.
+       - Utiliza la tabla oficial de FADEEAC (Abril 2025)
+       - Permite personalizar la distancia para cada cultivo
+       - Aplica recargos específicos según tipo de cultivo (girasol 20%, avena 10%)
+       - Opcional: aplica recargo por caminos de tierra (20%)
+       
+    2. **Ingreso manual en pesos**: Ingresas directamente el costo por tonelada en pesos argentinos.
+       - Convierte automáticamente a dólares según el tipo de cambio
+       
+    3. **Ingreso manual en dólares**: Ingresas directamente el costo por tonelada en USD.
+    
+    Los costos de flete se aplican por tonelada y afectan directamente el margen, ya que se restan 
+    del ingreso bruto. La calculadora multiplica automáticamente el flete por tonelada por el rendimiento 
+    para obtener el costo por hectárea.
+    """)
 
 # Pie de página
 st.markdown("---")
 st.markdown("© 2025 Calculadora de Márgenes Agrícolas | Desarrollado para Ingenieros Agrónomos")
+
+# Para ejecutar el programa, guarda este archivo como app.py y corre:
+# streamlit run app.py

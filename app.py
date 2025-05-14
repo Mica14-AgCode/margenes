@@ -1,34 +1,25 @@
 import streamlit as st
+
+# Configuración de la página debe ser el PRIMER comando de Streamlit
+st.set_page_config(
+    page_title="Calculadora de Márgenes Agrícolas",
+    page_icon="🌱",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# DESPUÉS de set_page_config, puedes importar otras bibliotecas
 import pandas as pd
 import numpy as np
 
-# Primero intentamos importar plotly directamente
+# Y luego intentar importar plotly
 try:
     import plotly.express as px
     import plotly.graph_objects as go
     st.success("Plotly importado correctamente!")
 except ImportError:
     st.error("No se pudo importar plotly. Intentando instalar...")
-    
-    # Intentar instalación solo si la importación falla
-    import subprocess
-    import sys
-    
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "plotly==5.14.1"])
-        import plotly.express as px
-        import plotly.graph_objects as go
-        st.success("Plotly instalado e importado correctamente!")
-    except Exception as e:
-        st.error(f"Error al instalar plotly: {e}")
-        # Definimos módulos dummy para evitar errores
-        class DummyModule:
-            def __getattr__(self, name):
-                return lambda *args, **kwargs: None
-        px = DummyModule()
-        go = DummyModule()
-
-# Continuar con el resto del código
+    # Resto del código...
 # Configuración de la página
 st.set_page_config(
     page_title="Calculadora de Márgenes Agrícolas",

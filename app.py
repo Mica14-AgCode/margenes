@@ -18,7 +18,123 @@ teniendo en cuenta rendimientos, precios, costos directos y otros gastos.
 """)
 
 # Crear pestañas
-tab1, tab2, tab3 = st.tabs(["Calculadora de Márgenes", "Comparativa de Cultivos", "Ayuda"])
+tab1, tab2, tab3 = st.tabs(["Calculadora de Márgenes", "Configuración de Hectáreas", "Ayuda"])
+
+# Inicializar variables en el estado de la sesión si no existen
+if 'hectareas_cultivos' not in st.session_state:
+    # Inicializar con valores predeterminados
+    st.session_state.hectareas_cultivos = {
+        "Soja 1ra": {"propias": 800, "arrendadas": 399, "total": 1199},
+        "Maíz": {"propias": 600, "arrendadas": 415, "total": 1015},
+        "Trigo": {"propias": 246, "arrendadas": 100, "total": 346},
+        "Soja 2da": {"propias": 209, "arrendadas": 100, "total": 309},
+        "Maíz 2da": {"propias": 20, "arrendadas": 17, "total": 37},
+        "Girasol": {"propias": 51, "arrendadas": 50, "total": 101}
+    }
+
+# Pestaña 2: Configuración de Hectáreas
+with tab2:
+    st.header("Configuración de Hectáreas por Cultivo")
+    st.markdown("""
+    Aquí puedes configurar cuántas hectáreas destinas a cada cultivo, diferenciando entre hectáreas propias y arrendadas.
+    """)
+    
+    # Crear columnas para los cultivos
+    col1, col2 = st.columns(2)
+    
+    # Contador para alternar entre columnas
+    counter = 0
+    
+    # Crear un diccionario temporal para almacenar los nuevos valores
+    new_hectareas = {}
+    
+    # Para cada cultivo, mostrar campos para hectáreas propias y arrendadas
+    for cultivo in st.session_state.hectareas_cultivos:
+        # Alternar entre columnas
+        current_col = col1 if counter % 2 == 0 else col2
+        counter += 1
+        
+        with current_col:
+            st.subheader(cultivo)
+            # Hectáreas propias (solo números enteros)
+            hectareas_propias = st.number_input(
+                f"Hectáreas propias - {cultivo}", 
+                min_value=0, 
+                value=st.session_state.hectareas_cultivos[cultivo]["propias"],
+                step=1,
+                key=f"propias_{cultivo}"
+            )
+            
+            # Hectáreas arrendadas (solo números enteros)
+            hectareas_arrendadas = st.number_input(
+                f"Hectáreas arrendadas - {cultivo}", 
+                min_value=0, 
+                value=st.session_state.hectareas_cultivos[cultivo]["arrendadas"],
+                step=1,
+                key=f"arrendadas_{cultivo}"
+            )
+            
+            # Calcular total
+            total_hectareas = hectareas_propias + hectareas_arrendadas
+            st.info(f"Total hectáreas {cultivo}: {total_hectareas}")
+            
+            # Guardar en el diccionario temporal
+            new_hectareas[cultivo] = {
+                "propias": hectareas_propias,
+                "arrendadas": hectareas_arrendadas,
+                "total": total_hectareas
+            }
+    
+    # Botón para actualizar todas las hectáreas
+    if st.button("Actualizar Hectáreas"):
+        st.session_state.hectareas_cultivos = new_hectareas
+        st.success("Hectáreas actualizadas correctamente")
+    
+    # Mostrar resumen
+    st.header("Resumen de Hectáreas")
+    
+    # Crear dataframe para mostrar el resumen
+    hectareas_data = {
+        "Cultivo": [],
+        "Hectáreas Propias": [],
+        "Hectáreas Arrendadas": [],
+        "Total Hectáreas": []
+    }
+    
+    for cultivo, datos in st.session_state.hectareas_cultivos.items():
+        hectareas_data["Cultivo"].append(cultivo)
+        hectareas_data["Hectáreas Propias"].append(datos["propias"])
+        hectareas_data["Hectáreas Arrendadas"].append(datos["arrendadas"])
+        hectareas_data["Total Hectáreas"].append(datos["total"])
+    
+    hectareas_df = pd.DataFrame(hectareas_data)
+    
+    # Añadir fila de totales
+    totales = {
+        "Cultivo": "TOTAL",
+        "Hectáreas Propias": sum(hectareas_data["Hectáreas Propias"]),
+        "Hectáreas Arrendadas": sum(hectareas_data["Hectáreas Arrendadas"]),
+        "Total Hectáreas": sum(hectareas_data["Total Hectáreas"])
+    }
+    
+    # Convertir a dataframe y concatenar
+    totales_df = pd.DataFrame([totales])
+    hectareas_df = pd.concat([hectareas_df, totales_df], ignore_index=True)
+    
+    # Mostrar tabla
+    st.dataframe(hectareas_df, hide_index=True, use_container_width=True)
+    
+    # Visualización
+    st.subheader("Distribución de Hectáreas por Cultivo")
+    
+    # Preparar datos para gráfico
+    chart_data = pd.DataFrame({
+        "Hectáreas": hectareas_data["Total Hectáreas"],
+        "Cultivo": hectareas_data["Cultivo"]
+    })
+    
+    # Mostrar gráfico
+    st.bar_chart(chart_data.set_index("Cultivo"))
 
 # Pestaña 1: Calculadora de Márgenes
 with tab1:
@@ -31,32 +147,41 @@ with tab1:
         # Selección de cultivo
         cultivo = st.selectbox(
             "Seleccionar cultivo",
-            ["Soja 1ra", "Maíz", "Trigo", "Soja 2da", "Maíz 2da", "Girasol"]
+            list(st.session_state.hectareas_cultivos.keys())
         )
         
+        # Obtener hectáreas del cultivo seleccionado
+        hectareas_propias = st.session_state.hectareas_cultivos[cultivo]["propias"]
+        hectareas_arrendadas = st.session_state.hectareas_cultivos[cultivo]["arrendadas"]
+        superficie = st.session_state.hectareas_cultivos[cultivo]["total"]
+        
+        # Mostrar información de hectáreas
+        st.info(f"Hectáreas propias: {hectareas_propias}")
+        st.info(f"Hectáreas arrendadas: {hectareas_arrendadas}")
+        st.info(f"Total hectáreas: {superficie}")
+        
         # Datos básicos
-        superficie = st.number_input("Superficie (Ha)", min_value=0.0, value=100.0, step=10.0)
-        rendimiento = st.number_input("Rendimiento (tn/ha)", min_value=0.0, value=3.0, step=0.1)
-        precio = st.number_input("Precio (USD/tn)", min_value=0.0, value=290.0, step=10.0)
+        rendimiento = st.number_input("Rendimiento (tn/ha)", min_value=0.0, value=3.0, step=0.1, format="%.1f")
+        precio = st.number_input("Precio (USD/tn)", min_value=0, value=290, step=10)
     
     with col2:
         # Costos directos
         st.subheader("Costos Directos (USD/ha)")
-        costo_labranza = st.number_input("Costo Labranza", min_value=0.0, value=80.0, step=5.0)
-        costo_semilla = st.number_input("Costo semilla, inoc. y trat.", min_value=0.0, value=60.0, step=5.0)
-        costo_herbicidas = st.number_input("Costo herbicidas", min_value=0.0, value=50.0, step=5.0)
-        costo_fungicidas = st.number_input("Costo fungicidas", min_value=0.0, value=10.0, step=5.0)
-        costo_insecticidas = st.number_input("Costo insecticidas", min_value=0.0, value=10.0, step=5.0)
-        costo_fertilizantes = st.number_input("Costo fertilizantes", min_value=0.0, value=30.0, step=5.0)
+        costo_labranza = st.number_input("Costo Labranza", min_value=0, value=80, step=5)
+        costo_semilla = st.number_input("Costo semilla, inoc. y trat.", min_value=0, value=60, step=5)
+        costo_herbicidas = st.number_input("Costo herbicidas", min_value=0, value=50, step=5)
+        costo_fungicidas = st.number_input("Costo fungicidas", min_value=0, value=10, step=5)
+        costo_insecticidas = st.number_input("Costo insecticidas", min_value=0, value=10, step=5)
+        costo_fertilizantes = st.number_input("Costo fertilizantes", min_value=0, value=30, step=5)
     
     with col3:
         # Otros costos
         st.subheader("Otros Costos (USD/ha)")
-        gastos_comercializacion = st.number_input("Gastos de comercialización", min_value=0.0, value=200.0, step=10.0)
-        iibb = st.number_input("IIBB (%)", min_value=0.0, value=3.5, step=0.1)
-        costos_estructura = st.number_input("Estructura", min_value=0.0, value=50.0, step=5.0)
-        costos_cosecha = st.number_input("Cosecha", min_value=0.0, value=90.0, step=5.0)
-        arrendamiento = st.number_input("Arrendamiento", min_value=0.0, value=160.0, step=10.0)
+        gastos_comercializacion = st.number_input("Gastos de comercialización", min_value=0, value=200, step=10)
+        iibb = st.number_input("IIBB (%)", min_value=0.0, value=3.5, step=0.5, format="%.1f")
+        costos_estructura = st.number_input("Estructura", min_value=0, value=50, step=5)
+        costos_cosecha = st.number_input("Cosecha", min_value=0, value=90, step=5)
+        arrendamiento = st.number_input("Arrendamiento (USD/ha, solo para hectáreas arrendadas)", min_value=0, value=160, step=10)
     
     # Cálculos
     # Ingresos
@@ -78,12 +203,18 @@ with tab1:
     ingreso_neto_ha = ingreso_bruto_ha - gastos_comercializacion - iibb_valor_ha
     ingreso_neto_total = ingreso_neto_ha * superficie
     
+    # Costos de arrendamiento (solo para hectáreas arrendadas)
+    costo_arrendamiento_total = arrendamiento * hectareas_arrendadas
+    
+    # Calcular el costo de arrendamiento por hectárea distribuido sobre todas las hectáreas
+    arrendamiento_promedio_ha = costo_arrendamiento_total / superficie if superficie > 0 else 0
+    
     # Margen bruto
     margen_bruto_ha = ingreso_neto_ha - total_costos_directos_ha - costos_estructura - costos_cosecha
     margen_bruto_total = margen_bruto_ha * superficie
     
-    # Margen directo
-    margen_directo_ha = margen_bruto_ha - arrendamiento
+    # Margen directo (considerando arrendamiento real)
+    margen_directo_ha = margen_bruto_ha - arrendamiento_promedio_ha
     margen_directo_total = margen_directo_ha * superficie
     
     # Mostrar resultados
@@ -92,20 +223,22 @@ with tab1:
     # Crear tabla de resultados
     data = {
         "Variable": [
-            "Superficie Ha", "Rendimiento tn", "USD/tn", 
+            "Superficie Total Ha", "Hectáreas Propias", "Hectáreas Arrendadas", 
+            "Rendimiento tn", "USD/tn", 
             "Ingreso Bruto / ha", 
             "Costo Labranza", "Costo semilla, inoc y trat", "Costo herbicidas",
             "Costo fungicidas", "Costo insecticidas", "Costo fertilizantes",
             "Total costos directos / ha",
-            "Ingreso Bruto / ha", "Gastos de comercialización", "IIBB 3.5%",
+            "Ingreso Bruto / ha", "Gastos de comercialización", f"IIBB {iibb}%",
             "Ingreso Neto / ha",
             "Costos Directos", "Estructura", "Cosecha",
             "Margen Bruto / ha",
-            "Arrendamiento / ha",
+            "Arrendamiento promedio / ha",
             "Margen Directo / ha"
         ],
         f"{cultivo} (USD/ha)": [
-            superficie, rendimiento, precio,
+            superficie, hectareas_propias, hectareas_arrendadas,
+            rendimiento, precio,
             round(ingreso_bruto_ha, 2),
             round(costo_labranza, 2), round(costo_semilla, 2), round(costo_herbicidas, 2),
             round(costo_fungicidas, 2), round(costo_insecticidas, 2), round(costo_fertilizantes, 2),
@@ -114,11 +247,12 @@ with tab1:
             round(ingreso_neto_ha, 2),
             round(total_costos_directos_ha, 2), round(costos_estructura, 2), round(costos_cosecha, 2),
             round(margen_bruto_ha, 2),
-            round(arrendamiento, 2),
+            round(arrendamiento_promedio_ha, 2),
             round(margen_directo_ha, 2)
         ],
         "Total (USD)": [
             "", "", "",
+            "", "",
             round(ingreso_bruto_total, 2),
             round(costo_labranza * superficie, 2), round(costo_semilla * superficie, 2), round(costo_herbicidas * superficie, 2),
             round(costo_fungicidas * superficie, 2), round(costo_insecticidas * superficie, 2), round(costo_fertilizantes * superficie, 2),
@@ -127,7 +261,7 @@ with tab1:
             round(ingreso_neto_total, 2),
             round(total_costos_directos, 2), round(costos_estructura * superficie, 2), round(costos_cosecha * superficie, 2),
             round(margen_bruto_total, 2),
-            round(arrendamiento * superficie, 2),
+            round(costo_arrendamiento_total, 2),
             round(margen_directo_total, 2)
         ]
     }
@@ -136,10 +270,10 @@ with tab1:
     
     # Definir grupos dentro de la tabla
     groups = {
-        "Producción": list(range(0, 4)),
-        "Costos directos por ha": list(range(4, 11)),
-        "Margen Bruto por ha": list(range(11, 19)),
-        "Margen Directo": list(range(19, 21))
+        "Producción": list(range(0, 6)),
+        "Costos directos por ha": list(range(6, 13)),
+        "Margen Bruto por ha": list(range(13, 21)),
+        "Margen Directo": list(range(21, 23))
     }
     
     # Mostrar tabla con estilo
@@ -151,9 +285,9 @@ with tab1:
     st.header("Visualización")
     
     # Datos para gráficos
-    labels = ['Ingreso Bruto', 'Costos Directos', 'Otros Costos', 'Margen Directo']
-    otros_costos = gastos_comercializacion + iibb_valor_ha + costos_estructura + costos_cosecha + arrendamiento
-    values = [ingreso_bruto_ha, total_costos_directos_ha, otros_costos, margen_directo_ha]
+    labels = ['Ingreso Bruto', 'Costos Directos', 'Otros Costos', 'Arrendamiento', 'Margen Directo']
+    otros_costos = gastos_comercializacion + iibb_valor_ha + costos_estructura + costos_cosecha
+    values = [ingreso_bruto_ha, total_costos_directos_ha, otros_costos, arrendamiento_promedio_ha, margen_directo_ha]
     
     # Gráfico de barras simple usando Streamlit
     st.subheader(f'Distribución de Ingresos y Costos para {cultivo}')
@@ -171,78 +305,46 @@ with tab1:
         'Tipo de Costo': costos_labels,
         'USD/ha': costos_values
     }).set_index('Tipo de Costo'))
-
-# Pestaña 2: Comparativa de Cultivos
-with tab2:
-    st.header("Comparativa de Cultivos")
     
-    # Cargar datos de ejemplo o permitir al usuario subir un archivo
-    st.subheader("Datos de Comparación")
-    
-    option = st.radio(
-        "Seleccione una opción:",
-        ["Usar datos de ejemplo", "Cargar mi propio archivo CSV"]
-    )
-    
-    if option == "Usar datos de ejemplo":
-        # Datos de ejemplo basados en la tabla proporcionada
-        data_example = {
-            "Variable": ["Superficie Ha", "Rendimiento tn", "USD/tn", "Ingreso Bruto / ha", 
-                         "Total costos directos / ha", "Margen Bruto / ha", "Margen Directo / ha"],
-            "Soja 1ra": [1199, 3.2, 290, 939, 279, 296, 137],
-            "Maíz": [1015, 7.7, 168, 1290, 456, 200, 40],
-            "Trigo": [346, 3.6, 198, 722, 312, 98, 19],
-            "Soja 2da": [309, 2.1, 290, 621, 205, 158, 78],
-            "Maíz 2da": [37, 6.5, 168, 1097, 369, 203, 123],
-            "Girasol": [101, 2.4, 293, 714, 286, 182, 23]
-        }
-        df_compare = pd.DataFrame(data_example)
-    else:
-        st.info("Por favor, sube un archivo CSV con los datos de comparación de cultivos.")
-        uploaded_file = st.file_uploader("Elige un archivo CSV", type="csv")
-        if uploaded_file is not None:
-            df_compare = pd.read_csv(uploaded_file)
-        else:
-            st.warning("No has subido ningún archivo. Usando datos de ejemplo.")
-            # Usar los mismos datos de ejemplo como fallback
-            data_example = {
-                "Variable": ["Superficie Ha", "Rendimiento tn", "USD/tn", "Ingreso Bruto / ha", 
-                             "Total costos directos / ha", "Margen Bruto / ha", "Margen Directo / ha"],
-                "Soja 1ra": [1199, 3.2, 290, 939, 279, 296, 137],
-                "Maíz": [1015, 7.7, 168, 1290, 456, 200, 40],
-                "Trigo": [346, 3.6, 198, 722, 312, 98, 19],
-                "Soja 2da": [309, 2.1, 290, 621, 205, 158, 78],
-                "Maíz 2da": [37, 6.5, 168, 1097, 369, 203, 123],
-                "Girasol": [101, 2.4, 293, 714, 286, 182, 23]
-            }
-            df_compare = pd.DataFrame(data_example)
-    
-    # Mostrar la tabla de comparativa
-    st.dataframe(df_compare, hide_index=True, use_container_width=True)
-    
-    # Visualizaciones comparativas
-    st.subheader("Visualizaciones Comparativas")
-    
-    # Seleccionar qué visualizar
-    compare_variable = st.selectbox(
-        "Seleccionar variable para comparar:",
-        ["Ingreso Bruto / ha", "Total costos directos / ha", "Margen Bruto / ha", "Margen Directo / ha"]
-    )
-    
-    # Obtener los datos para la visualización
-    if "Variable" in df_compare.columns:
-        # Si está en formato largo (con columna de Variable)
-        var_index = df_compare[df_compare["Variable"] == compare_variable].index[0]
-        compare_data = df_compare.iloc[var_index, 1:].reset_index()
-        compare_data.columns = ["Cultivo", "Valor"]
-    else:
-        # Si está en formato ancho
-        compare_data = df_compare[compare_variable].reset_index()
-        compare_data.columns = ["Cultivo", "Valor"]
-    
-    # Gráfico de barras usando Streamlit
-    st.subheader(f"Comparación de {compare_variable} entre Cultivos")
-    st.bar_chart(compare_data.set_index("Cultivo"))
+    # Comparativa de resultados entre hectáreas propias y arrendadas
+    if hectareas_propias > 0 and hectareas_arrendadas > 0:
+        st.subheader(f'Comparativa entre hectáreas propias y arrendadas para {cultivo}')
+        
+        # Cálculos específicos para hectáreas propias
+        margen_bruto_propias = margen_bruto_ha * hectareas_propias
+        margen_directo_propias = margen_bruto_ha * hectareas_propias
+        
+        # Cálculos específicos para hectáreas arrendadas
+        margen_bruto_arrendadas = margen_bruto_ha * hectareas_arrendadas
+        margen_directo_arrendadas = (margen_bruto_ha - arrendamiento) * hectareas_arrendadas
+        
+        # Preparar datos para el gráfico
+        comp_labels = ['Hectáreas Propias', 'Hectáreas Arrendadas']
+        margen_bruto_values = [margen_bruto_propias/hectareas_propias, margen_bruto_arrendadas/hectareas_arrendadas]
+        margen_directo_values = [margen_directo_propias/hectareas_propias, margen_directo_arrendadas/hectareas_arrendadas]
+        
+        # Crear dataframe para el gráfico
+        comp_data = pd.DataFrame({
+            'Tipo': comp_labels,
+            'Margen Bruto (USD/ha)': margen_bruto_values,
+            'Margen Directo (USD/ha)': margen_directo_values
+        })
+        
+        # Mostrar tabla
+        st.dataframe(comp_data, hide_index=True, use_container_width=True)
+        
+        # Visualizar
+        st.subheader("Margen Bruto (USD/ha)")
+        st.bar_chart(pd.DataFrame({
+            'Tipo': comp_labels,
+            'USD/ha': margen_bruto_values
+        }).set_index('Tipo'))
+        
+        st.subheader("Margen Directo (USD/ha)")
+        st.bar_chart(pd.DataFrame({
+            'Tipo': comp_labels,
+            'USD/ha': margen_directo_values
+        }).set_index('Tipo'))
 
 # Pestaña 3: Ayuda
 with tab3:
@@ -252,21 +354,22 @@ with tab3:
     st.markdown("""
     Esta aplicación te permite calcular los márgenes de diferentes cultivos agrícolas. Sigue estos pasos:
     
-    1. En la pestaña **Calculadora de Márgenes**:
+    1. En la pestaña **Configuración de Hectáreas**:
+       - Establece cuántas hectáreas propias y arrendadas tienes para cada cultivo
+       - Haz clic en "Actualizar Hectáreas" para guardar los cambios
+    
+    2. En la pestaña **Calculadora de Márgenes**:
        - Selecciona el cultivo que deseas evaluar
-       - Ingresa la superficie, rendimiento y precio
+       - Ingresa el rendimiento y precio
        - Completa los costos directos (labranza, semillas, etc.)
        - Ingresa otros costos como comercialización, estructura y arrendamiento
        - Los resultados se actualizarán automáticamente
-    
-    2. En la pestaña **Comparativa de Cultivos**:
-       - Puedes ver una comparación entre diferentes cultivos
-       - Usar los datos de ejemplo o cargar tu propio archivo CSV
-       - Seleccionar qué variable comparar entre cultivos
     """)
     
     st.subheader("Glosario de Términos")
     terms = {
+        "Hectáreas Propias": "Terrenos de tu propiedad donde realizas cultivos",
+        "Hectáreas Arrendadas": "Terrenos que alquilas a terceros para realizar cultivos",
         "Ingreso Bruto": "Rendimiento × Precio del cultivo",
         "Costos Directos": "Suma de costos de labranza, semillas, herbicidas, fungicidas, insecticidas y fertilizantes",
         "Gastos de Comercialización": "Costos asociados a la venta del producto (fletes, comisiones, etc.)",
@@ -284,7 +387,8 @@ with tab3:
     - Compara el Margen Directo por hectárea entre diferentes cultivos para determinar cuál es más rentable
     - Presta atención a la relación entre costos directos e ingresos
     - Analiza qué costos tienen mayor impacto en cada cultivo
-    - Considera la rotación de cultivos para un análisis más completo
+    - Considera la diferencia entre hectáreas propias y arrendadas para maximizar tu rentabilidad
+    - Evalúa estrategias de rotación de cultivos para un análisis más completo
     """)
     
     st.subheader("Contacto y Soporte")
